@@ -139,9 +139,9 @@ function newConnection(socket){
                         // about to add enemy bullet detection
                             // players[person].x
                         if (distance(allBullets[player][i].x, allBullets[player][i].y, players[person].x, players[person].y) < players[person].r/2 && person != socket.id){
+                            io.to(socket.id).emit('removeBullets', i);
                             players[person].health -= players[allBullets[player][i].shooter].weapon.damage;
                             allBullets[player].splice(i, 1);
-                            io.to(socket.id).emit('removeBullets', i);
                         }
                     }
                 }
