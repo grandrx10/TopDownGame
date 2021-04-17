@@ -93,7 +93,7 @@ io.sockets.on("connection", newConnection);
 setInterval(function () {
     io.sockets.emit('update', players);
     io.sockets.emit('returnBullets', allBullets);
-  }, 100);
+  }, 1000);
 
 setInterval(function () {
   gameTime ++;
