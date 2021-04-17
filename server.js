@@ -147,8 +147,9 @@ function newConnection(socket){
                 }
             }
             if (players[person].health <= 0){
-                io.to(person).emit('dead', 1);
+                
                 delete allBullets[person];
+                io.to(person).emit('dead', 1);
                 delete players[person];
             }
         }
