@@ -46,7 +46,7 @@ function setup() {
     socket.on('shootBullet', function(){
         var newBullet = new Bullet (players2[socket.id].x, players2[socket.id].y, 
             createVector(mouseX-width/2 + (Math.random() * 2 - 1) * players2[socket.id].weapon.inaccuracy, 
-            mouseY-height/2 + (Math.random() * 2 - 1) * players2[socket.id].weapon.inaccuracy).setMag(20),socket.id)
+            mouseY-height/2 + (Math.random() * 2 - 1) * players2[socket.id].weapon.inaccuracy).setMag(10),socket.id)
         bullets.push(newBullet);
     });
 
