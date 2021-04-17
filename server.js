@@ -119,16 +119,14 @@ function newConnection(socket){
         for (var c = 0; c < walls.length; c++){
             for (var player in allBullets){
                 //for (let bullet of allBullets[player]){ 
-                if (allBullets[player] != []){
-                    for (var i = allBullets[player].length -1;  i>= 0; i--){
-                        leftSide = walls[c].x;
-                        rightSide = walls[c].x + walls[c].length;
-                        topSide = walls[c].y;
-                        botSide = walls[c].y + walls[c].width;
-                        if (allBullets[player][i].x > leftSide && allBullets[player][i].x < rightSide && allBullets[player][i].y > topSide && allBullets[player][i].y < botSide){
-                            allBullets[player].splice(i, 1);
-                            io.to(socket.id).emit('removeBullets', i);
-                        }
+                for (var i = allBullets[player].length -1;  i>= 0; i--){
+                    leftSide = walls[c].x;
+                    rightSide = walls[c].x + walls[c].length;
+                    topSide = walls[c].y;
+                    botSide = walls[c].y + walls[c].width;
+                    if (allBullets[player][i].x > leftSide && allBullets[player][i].x < rightSide && allBullets[player][i].y > topSide && allBullets[player][i].y < botSide){
+                        allBullets[player].splice(i, 1);
+                        io.to(socket.id).emit('removeBullets', i);
                     }
                 }
             }

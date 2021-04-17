@@ -49,6 +49,7 @@ function setup() {
             mouseY-height/2 + (Math.random() * 2 - 1) * players2[socket.id].weapon.inaccuracy).setMag(10),socket.id)
         bullets.push(newBullet);
     });
+    socket.on('removeBullets', removeBullets);
 
     $(document).ready(function() {
         //username modal start     
@@ -206,7 +207,6 @@ function keyPressed(){
 function startGame(){
     socket.on('update', showAll);
     socket.on('returnBullets', showAllBullets);
-    socket.on('removeBullets', removeBullets);
 
     socket.on('dead', function(){
         userNameSubmitted = false;
