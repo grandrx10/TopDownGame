@@ -9,7 +9,7 @@ function Player(username, characterType, x, y){
     this.r = 50;
     this.health = 100;
     this.maxHealth = 100;
-    this.weapon = new Weapon("rifle", 30, 90, 30, 20, 5, 30); // weapon name, ammo, reserve ammo, clip ammo, damage, inaccuracy, fire rate
+    this.weapon = new Weapon("rifle", 30, 90, 30, 20, 5, 100); // weapon name, ammo, reserve ammo, clip ammo, damage, inaccuracy, fire rate
     // add update function Take in WASD and update X and Y
     this.move = function(dir){
         if (dir == "up" && checkCollision(this, walls, "up")){
