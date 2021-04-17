@@ -199,8 +199,10 @@ function removeBullets(i){
 }
 
 function keyPressed(){
-    if (keyIsDown(82)){ // reload (r)
-        socket.emit('reload', 1);
+    if (userNameSubmitted){
+        if (keyIsDown(82)){ // reload (r)
+            socket.emit('reload', 1);
+        }
     }
 }
 
