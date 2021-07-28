@@ -114,25 +114,26 @@ function draw() {
         
             }
 
+            if (players2[socket.id] != undefined){
+                fill(0);
+                textAlign(CENTER);
+                text(players2[socket.id].username, width/2, height/2 - 50);
+                textAlign(LEFT);
+                fill(0,206,209);
+                ellipse(width/2, height/2, 50, 50);
+                fill(0);
+                rect(players2[socket.id].x - xRange - 25, players2[socket.id].y - yRange - 40, 50, 10);
+                fill(50,205,50);
+                rect(players2[socket.id].x - xRange - 25, players2[socket.id].y - yRange - 40, 50*players2[socket.id].health/players2[socket.id].maxHealth, 10);
+            
 
-            fill(0);
-            textAlign(CENTER);
-            text(players2[socket.id].username, width/2, height/2 - 50);
-            textAlign(LEFT);
-            fill(0,206,209);
-            ellipse(width/2, height/2, 50, 50);
-            fill(0);
-            rect(players2[socket.id].x - xRange - 25, players2[socket.id].y - yRange - 40, 50, 10);
-            fill(50,205,50);
-            rect(players2[socket.id].x - xRange - 25, players2[socket.id].y - yRange - 40, 50*players2[socket.id].health/players2[socket.id].maxHealth, 10);
-        
-
-            fill(0);
-            textAlign(CENTER);
-            textSize(20);
-            text(players2[socket.id].ammo+ "/" + players2[socket.id].reserveAmmo, 1000, 500);
-            textSize(12);
-            line(width/2, height/2, mouseX, mouseY);
+                fill(0);
+                textAlign(CENTER);
+                textSize(20);
+                text(players2[socket.id].ammo+ "/" + players2[socket.id].reserveAmmo, 1000, 500);
+                textSize(12);
+                line(width/2, height/2, mouseX, mouseY);
+            }
         }
     }
 }
@@ -144,7 +145,6 @@ function showAll(players){
         xRange = players[socket.id].x - width/2;
         yRange = players[socket.id].y - height/2;
     }
-    
 }
 
 // function simplifyBullets(){
