@@ -114,6 +114,7 @@ var io = socket(server);
 io.sockets.on("connection", newConnection);
 
 setInterval(function () {
+    killPlayers();
     io.sockets.emit('update', players);
     io.sockets.emit('bulletUpdate', bullets);
     io.sockets.emit('updateTime', [gameTime, walls]);
@@ -245,9 +246,6 @@ function checkBulletCollision (){
                 bullets.splice(i, 1);
             }
         }
-        if (players[player].health <= 0){
-            delete players[player];
-        }
     }
 }
 
@@ -260,5 +258,11 @@ function reloadCheck(){
         if (gameTime - players[player].playerReloadingTime > players[player].reloadTime){
             players[player].isReloading = false;
         }
+    }
+}
+
+function killPlayers(){
+    if (players[player].health <= 0){
+        delete players[player];
     }
 }
