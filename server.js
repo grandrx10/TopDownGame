@@ -13,23 +13,23 @@ function Player(username, characterType, x, y){
     if (this.characterType == "assualt"){
         this.weaponName = "rifle";
         this.ammo = 30;
-        this.reserveAmmo = 90;
+        this.reserveAmmo = 300;
         this.clipAmmo = 30;
         this.damage = 10;
         this.inaccuracy = 10;
-        this.bulletSpeed = 10;
-        this.fireRate = 10;
-        this.reloadTime = 100;
+        this.bulletSpeed = 15;
+        this.fireRate = 100;
+        this.reloadTime = 1000;
     } else if (this.characterType == "marksman"){
         this.weaponName = "sniper";
         this.ammo = 5;
-        this.reserveAmmo = 20;
+        this.reserveAmmo = 40;
         this.clipAmmo = 5;
         this.damage = 60;
         this.inaccuracy = 0;
-        this.bulletSpeed = 20;
-        this.fireRate = 150;
-        this.reloadTime = 300;
+        this.bulletSpeed = 40;
+        this.fireRate = 1000;
+        this.reloadTime = 2000;
     }
     this.timeLastShot = 0;
     //RELOAD TECHNIQUES
@@ -78,14 +78,18 @@ function Bullet(x, y, aimX, aimY, shooter, speed) {
 }
 
 var players = {};
-var walls = [new Wall(200, 200, 100, 100), new Wall(500, 200, 20, 100)];
+var walls = [new Wall(200, 200, 100, 100), new Wall(500, 200, 20, 300)];
 walls.push(new Wall(-100, -100, 10000, 100));
 walls.push(new Wall(-100, -100, 100, 10000));
-walls.push(new Wall(600, -100, 100, 10000));
+walls.push(new Wall(1000, -100, 100, 10000));
 walls.push(new Wall(-100, 1000, 10000, 100));
+walls.push(new Wall(200, 800, 200, 100));
+walls.push(new Wall(600, 650, 150, 150));
+walls.push(new Wall(750, 250, 500, 100));
 
 var bullets = [];
-var gameTime = 0;
+var d = new Date();
+var gameTime = d.getTime();
 var start = false; // note
 
 //measuring tools
@@ -118,10 +122,11 @@ setInterval(function () {
     }
     checkBulletCollision();
     reloadCheck();
-  }, 10);
+}, 10);
 
 setInterval(function () {
-  gameTime ++;
+  d = new Date();
+  gameTime = d.getTime();
 }, 1);
 
 function newConnection(socket){

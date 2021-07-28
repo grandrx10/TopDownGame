@@ -18,7 +18,7 @@ function Wall (x, y, length, width){
 
 function setup() {
     background(128, 128, 128);
-    createCanvas(600, 600);
+    createCanvas(1200, 600);
     frameRate(60);
     socket = io.connect('');
 
@@ -76,22 +76,65 @@ function draw() {
             }
 
             if (mouseIsPressed){
-                socket.emit('shoot', [mouseX - 300 + players2[socket.id].x, mouseY - 300 + players2[socket.id].y]);
+                socket.emit('shoot', [mouseX - 600 + players2[socket.id].x, mouseY - 300 + players2[socket.id].y]);
+                console.log(mouseX - 600 + players2[socket.id].x , mouseY - 300 + players2[socket.id].y);
             }
+
+            for (var i = 0; i < bullets.length; i++){
+                fill(255);
+                ellipse(bullets[i].x - xRange, bullets[i].y - yRange, bullets[i].r);
+            }
+        
+            for(var i =0; i <= walls.length - 1; i++ ){
+                fill(105,105,105);
+                rect(walls[i].x - xRange, walls[i].y- yRange, walls[i].length, walls[i].width);
+            }
+            // players
+            for (let player in players2){
+                if (player != socket.id){
+                    fill(0);
+                    textAlign(CENTER);
+                    text(players2[player].username, players2[player].x - xRange, players2[player].y - yRange - 50);
+                    textAlign(LEFT);
+                    fill(255);
+                    ellipse(players2[player].x - xRange, players2[player].y - yRange, 50, 50);
+                    fill(0);
+                    rect(players2[player].x - xRange - 25, players2[player].y - yRange - 40, 50, 10);
+                    fill(50,205,50);
+                    rect(players2[player].x - xRange - 25, players2[player].y - yRange - 40, 50*players2[player].health/players2[player].maxHealth, 10);
+                }
+                if (players2[player].isReloading){
+                    fill(0);
+                    textAlign(CENTER);
+                    text("RELOADING", players2[player].x - xRange, players2[player].y - yRange - 80); 
+                    rect(players2[player].x - xRange - 25, players2[player].y - yRange - 75, 50, 10);
+                    fill(255);
+                    rect(players2[player].x - xRange - 25, players2[player].y - yRange - 75, 50*(gameTime - players2[player].playerReloadingTime)/players2[player].reloadTime, 10);
+                }
+        
+            }
+
+
+            fill(0);
+            textAlign(CENTER);
+            text(players2[socket.id].username, width/2, height/2 - 50);
+            textAlign(LEFT);
+            fill(0,206,209);
+            ellipse(width/2, height/2, 50, 50);
+            fill(0);
+            rect(players2[socket.id].x - xRange - 25, players2[socket.id].y - yRange - 40, 50, 10);
+            fill(50,205,50);
+            rect(players2[socket.id].x - xRange - 25, players2[socket.id].y - yRange - 40, 50*players2[socket.id].health/players2[socket.id].maxHealth, 10);
+        
+
+            fill(0);
+            textAlign(CENTER);
+            textSize(20);
+            text(players2[socket.id].ammo+ "/" + players2[socket.id].reserveAmmo, 1000, 500);
+            textSize(12);
+            line(width/2, height/2, mouseX, mouseY);
         }
     }
-
-    for (var i = 0; i < bullets.length; i++){
-        fill(255);
-        ellipse(bullets[i].x - xRange, bullets[i].y - yRange, bullets[i].r);
-    }
-
-    for(var i =0; i <= walls.length - 1; i++ ){
-        fill(105,105,105);
-        rect(walls[i].x - xRange, walls[i].y- yRange, walls[i].length, walls[i].width);
-    }
-
-    line(width/2, height/2, mouseX, mouseY);
 }
 
 function showAll(players){
@@ -99,47 +142,6 @@ function showAll(players){
     xRange = players[socket.id].x - width/2;
     yRange = players[socket.id].y - height/2;
     players2 = players;
-
-
-    for (let player in players){
-        if (player != socket.id){
-            fill(0);
-            textAlign(CENTER);
-            text(players[player].username, players[player].x - xRange, players[player].y - yRange - 50);
-            textAlign(LEFT);
-            fill(255);
-            ellipse(players[player].x - xRange, players[player].y - yRange, 50, 50);
-            fill(0);
-            rect(players[player].x - xRange - 25, players[player].y - yRange - 40, 50, 10);
-            fill(50,205,50);
-            rect(players[player].x - xRange - 25, players[player].y - yRange - 40, 50*players[player].health/players[player].maxHealth, 10);
-        }
-        if (players[player].isReloading){
-            fill(0);
-            textAlign(CENTER);
-            text("RELOADING", players[player].x - xRange, players[player].y - yRange - 80); 
-            rect(players[player].x - xRange - 25, players[player].y - yRange - 75, 50, 10);
-            fill(255);
-            rect(players[player].x - xRange - 25, players[player].y - yRange - 75, 50*(gameTime - players[player].playerReloadingTime)/players[player].reloadTime, 10);
-        }
-
-    }
-    fill(0);
-    textAlign(CENTER);
-    text(players[socket.id].username, width/2, height/2 - 50);
-    textAlign(LEFT);
-    fill(0,206,209);
-    ellipse(width/2, height/2, 50, 50);
-    fill(0);
-    rect(width/2 - 100,  550 , 200, 20);
-    fill(50,205,50);
-    rect(width/2 - 100,  550, 200*players[socket.id].health/players[socket.id].maxHealth, 20);
-
-    fill(0);
-    textAlign(CENTER);
-    textSize(20);
-    text(players[socket.id].ammo+ "/" + players[socket.id].reserveAmmo, 500, 500);
-    textSize(12);
     
 }
 
