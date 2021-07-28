@@ -1,38 +1,19 @@
+
 var socket;
 var xRange;
 var yRange;
 var bullets = [];
-var simpleBullets = [];
 var players2;
 var userNameSubmitted = false;
-var walls = [new Wall(200, 200, 100, 100) , new Wall(500, 200, 20, 100)];
-walls.push(new Wall(-100, -100, 10000, 100));
-walls.push(new Wall(-100, -100, 100, 10000));
+var gameTime;
 
-
-function Bullet(x,y,vel,shooter) {
-    this.pos = createVector(x,y);
-    this.r = 5;
-    this.vel = vel; // check this
-    this.shooter = shooter;
-
-    this.update = function() {
-        this.pos.add(this.vel);
-    }
-}
+var walls = [];
 
 function Wall (x, y, length, width){
     this.x = x;
     this.y = y;
     this.length = length;
     this.width = width;
-}
-
-function SimpleBullet (x, y, r, shooter){ 
-    this.x = x;
-    this.y = y;
-    this.r = r;
-    this.shooter = shooter;
 }
 
 function setup() {
@@ -42,14 +23,6 @@ function setup() {
     socket = io.connect('');
 
     socket.on('gameStart',startGame);
-
-    socket.on('shootBullet', function(){
-        var newBullet = new Bullet (players2[socket.id].x, players2[socket.id].y, 
-            createVector(mouseX-width/2 + (Math.random() * 2 - 1) * players2[socket.id].weapon.inaccuracy, 
-            mouseY-height/2 + (Math.random() * 2 - 1) * players2[socket.id].weapon.inaccuracy).setMag(10),socket.id)
-        bullets.push(newBullet);
-    });
-    socket.on('removeBullets', removeBullets);
 
     $(document).ready(function() {
         //username modal start     
@@ -101,43 +74,24 @@ function draw() {
             if (keyIsDown(68)){ // right (d)
                 socket.emit('move', 'right');
             }
-        
-            // automatic fire
+
             if (mouseIsPressed){
-                mouseDown = true;
-            } else {
-                mouseDown = false;
-            }
-        
-            if (mouseDown){
-                //pass to server
-                // console.log(players2[socket.id].weapon);
-                if (players2[socket.id].weapon.ammo >= 1){
-                    //don't shoot right away
-                    //send to server to check if you should shoot
-                    socket.emit('decreaseAmmo', 1);
-                    // bullets.push(newBullet);
-                }
-            }
-        
-            //console.log(bullets);
-            for(bullet of bullets){
-                bullet.update();
-            }
-        
-        
-            simplifyBullets();
-            socket.emit('bulletUpdate', simpleBullets);
-            // console.log(allBullets);
-        
-            //console.log(simpleBullets);
-        
-            for(var i =0; i <= walls.length - 1; i++ ){
-                fill(105,105,105);
-                rect(walls[i].x - xRange, walls[i].y- yRange, walls[i].length, walls[i].width);
+                socket.emit('shoot', [mouseX - 300 + players2[socket.id].x, mouseY - 300 + players2[socket.id].y]);
             }
         }
     }
+
+    for (var i = 0; i < bullets.length; i++){
+        fill(255);
+        ellipse(bullets[i].x - xRange, bullets[i].y - yRange, bullets[i].r);
+    }
+
+    for(var i =0; i <= walls.length - 1; i++ ){
+        fill(105,105,105);
+        rect(walls[i].x - xRange, walls[i].y- yRange, walls[i].length, walls[i].width);
+    }
+
+    line(width/2, height/2, mouseX, mouseY);
 }
 
 function showAll(players){
@@ -145,6 +99,7 @@ function showAll(players){
     xRange = players[socket.id].x - width/2;
     yRange = players[socket.id].y - height/2;
     players2 = players;
+
 
     for (let player in players){
         if (player != socket.id){
@@ -159,6 +114,15 @@ function showAll(players){
             fill(50,205,50);
             rect(players[player].x - xRange - 25, players[player].y - yRange - 40, 50*players[player].health/players[player].maxHealth, 10);
         }
+        if (players[player].isReloading){
+            fill(0);
+            textAlign(CENTER);
+            text("RELOADING", players[player].x - xRange, players[player].y - yRange - 80); 
+            rect(players[player].x - xRange - 25, players[player].y - yRange - 75, 50, 10);
+            fill(255);
+            rect(players[player].x - xRange - 25, players[player].y - yRange - 75, 50*(gameTime - players[player].playerReloadingTime)/players[player].reloadTime, 10);
+        }
+
     }
     fill(0);
     textAlign(CENTER);
@@ -170,32 +134,29 @@ function showAll(players){
     rect(width/2 - 100,  550 , 200, 20);
     fill(50,205,50);
     rect(width/2 - 100,  550, 200*players[socket.id].health/players[socket.id].maxHealth, 20);
-    line (width/2, height/2, mouseX, mouseY);
-    textSize(20);
+
     fill(0);
-    text (players2[socket.id].weapon.ammo + "/" + players2[socket.id].weapon.reserveAmmo, 500, 500);
+    textAlign(CENTER);
+    textSize(20);
+    text(players[socket.id].ammo+ "/" + players[socket.id].reserveAmmo, 500, 500);
+    textSize(12);
     
 }
 
-function simplifyBullets(){
-    for (var i = 0; i < bullets.length; i ++){
-        var simpleBullet = new SimpleBullet(bullets[i].pos.x, bullets[i].pos.y, bullets[i].r, bullets[i].shooter);
-        simpleBullets[i] = simpleBullet;
-    }
-}
+// function simplifyBullets(){
+//     for (var i = 0; i < bullets.length; i ++){
+//         var simpleBullet = new SimpleBullet(bullets[i].pos.x, bullets[i].pos.y, bullets[i].r, bullets[i].shooter);
+//         simpleBullets[i] = simpleBullet;
+//     }
+// }
 
 function showAllBullets(allBullets){
-    for (var player in allBullets){
-        for (let bullet of allBullets[player]){
-            fill(255);
-            ellipse(bullet.x - xRange, bullet.y - yRange, bullet.r, bullet.r);
-        }
-    }
+    bullets = allBullets;
 }
 
-function removeBullets(i){
-    simpleBullets.splice(i,1);
-    bullets.splice(i,1);
+function trackTime(time){
+    gameTime = time[0];
+    walls = time[1];
 }
 
 function keyPressed(){
@@ -208,9 +169,13 @@ function keyPressed(){
 
 function startGame(){
     socket.on('update', showAll);
-    socket.on('returnBullets', showAllBullets);
-
+    socket.on('updateTime', trackTime);
+    socket.on('bulletUpdate', showAllBullets);
     socket.on('dead', function(){
         userNameSubmitted = false;
     })
 }
+
+// function mousePressed(){
+//     socket.emit('shoot', [mouseX - xRange, mouseY - yRange]);
+// }

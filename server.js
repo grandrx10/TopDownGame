@@ -9,7 +9,33 @@ function Player(username, characterType, x, y){
     this.r = 50;
     this.health = 100;
     this.maxHealth = 100;
-    this.weapon = new Weapon("rifle", 30, 90, 30, 20, 5, 100); // weapon name, ammo, reserve ammo, clip ammo, damage, inaccuracy, fire rate
+    // weapon name[0], ammo[1], reserve ammo[2], clip ammo[3], damage[4], inaccuracy[5], speed[6], fire rate[7], time last fired[8]
+    if (this.characterType == "assualt"){
+        this.weaponName = "rifle";
+        this.ammo = 30;
+        this.reserveAmmo = 90;
+        this.clipAmmo = 30;
+        this.damage = 10;
+        this.inaccuracy = 10;
+        this.bulletSpeed = 10;
+        this.fireRate = 10;
+        this.reloadTime = 100;
+    } else if (this.characterType == "marksman"){
+        this.weaponName = "sniper";
+        this.ammo = 5;
+        this.reserveAmmo = 20;
+        this.clipAmmo = 5;
+        this.damage = 60;
+        this.inaccuracy = 0;
+        this.bulletSpeed = 20;
+        this.fireRate = 150;
+        this.reloadTime = 300;
+    }
+    this.timeLastShot = 0;
+    //RELOAD TECHNIQUES
+    this.playerReloadingTime = 0;
+    this.isReloading = false;
+
     // add update function Take in WASD and update X and Y
     this.move = function(dir){
         if (dir == "up" && checkCollision(this, walls, "up")){
@@ -24,26 +50,6 @@ function Player(username, characterType, x, y){
     }
 }
 
-
-function Weapon(name, ammo, reserveAmmo, clipAmmo, damage, inaccuracy, fireRate){
-    this.name = name;
-    this.ammo = ammo;
-    this.reserveAmmo = reserveAmmo;
-    this.clipAmmo = clipAmmo;
-    this.damage = damage;
-    this.inaccuracy = inaccuracy;
-    this.fireRate = fireRate;
-    this.lastShot = 0;
-    this.canFire = function(){
-        if (gameTime - this.lastShot > this.fireRate){
-            this.lastShot = gameTime;
-            return true;
-        } else {
-            return false;
-        }
-    }
-}
-
 function Wall (x, y, length, width){
     this.x = x;
     this.y = y;
@@ -51,24 +57,36 @@ function Wall (x, y, length, width){
     this.width = width;
 }
 
-// function Bullet(x, y, angle, xSpeed, ySpeed, shooter) {
-//     this.x = x;
-//     this.y = y;
-//     this.width = 10;
-//     this.height = 10;
-//     this.angle = angle;
-//     this.xSpeed = xSpeed;
-//     this.ySpeed = ySpeed;
-//     this.shooter = shooter;
-// }
+function Bullet(x, y, aimX, aimY, shooter, speed) {
+    this.x = x;
+    this.y = y;
+    this.aimX = aimX;
+    this.aimY = aimY;
+    this.r = 10;
+    this.shooter = shooter;
+    this.travel = [aimX - x, aimY - y];
+    this.speed = speed;
+    // this.normalVec = vector.normalize();
+    // this.update = function(){
+    //     this.x = this.x + normalVec.x;
+    //     this.y = this.y + normalVec.y;
+    // }
+    this.updateBulletLocation = function(){
+        this.x = this.x + this.speed*this.travel[0]/Math.sqrt(Math.pow(this.travel[0],2) + Math.pow(this.travel[1],2));
+        this.y = this.y + this.speed*this.travel[1]/Math.sqrt(Math.pow(this.travel[0],2) + Math.pow(this.travel[1],2));
+    }
+}
 
 var players = {};
 var walls = [new Wall(200, 200, 100, 100), new Wall(500, 200, 20, 100)];
 walls.push(new Wall(-100, -100, 10000, 100));
 walls.push(new Wall(-100, -100, 100, 10000));
+walls.push(new Wall(600, -100, 100, 10000));
+walls.push(new Wall(-100, 1000, 10000, 100));
 
-var allBullets = {};
+var bullets = [];
 var gameTime = 0;
+var start = false; // note
 
 //measuring tools
 var leftSide;
@@ -77,6 +95,7 @@ var topSide;
 var botSide;
 
 var express = require('express');
+var Victor = require('victor');
 
 var app = express();
 var server = app.listen(process.env.PORT || 3000);
@@ -92,8 +111,14 @@ io.sockets.on("connection", newConnection);
 
 setInterval(function () {
     io.sockets.emit('update', players);
-    io.sockets.emit('returnBullets', allBullets);
-  }, 1000);
+    io.sockets.emit('bulletUpdate', bullets);
+    io.sockets.emit('updateTime', [gameTime, walls]);
+    for (bullet of bullets){
+        bullet.updateBulletLocation();
+    }
+    checkBulletCollision();
+    reloadCheck();
+  }, 10);
 
 setInterval(function () {
   gameTime ++;
@@ -112,67 +137,28 @@ function newConnection(socket){
     socket.on('move', function(dir){
         players[socket.id].move(dir);
     })
-    socket.on('bulletUpdate', function(bullets){
-        allBullets[socket.id] = bullets;
-        // detect bullet collision with edge of map
-        //if collision, delete bullet and emit message for client to delete bullet
-        for (var c = 0; c < walls.length; c++){
-            for (var player in allBullets){
-                //for (let bullet of allBullets[player]){ 
-                for (var i = allBullets[player].length -1;  i>= 0; i--){
-                    leftSide = walls[c].x;
-                    rightSide = walls[c].x + walls[c].length;
-                    topSide = walls[c].y;
-                    botSide = walls[c].y + walls[c].width;
-                    if (allBullets[player][i].x > leftSide && allBullets[player][i].x < rightSide && allBullets[player][i].y > topSide && allBullets[player][i].y < botSide){
-                        allBullets[player].splice(i, 1);
-                        io.to(socket.id).emit('removeBullets', i);
-                    }
-                }
-            }
-        }
-        for (var person in players){
-            for (var player in allBullets){
-                //for (let bullet of allBullets[player]){ 
-                if (allBullets[player] != []){
-                    for (var i = allBullets[player].length -1;  i>= 0; i--){
-                        // about to add enemy bullet detection
-                            // players[person].x
-                        if (distance(allBullets[player][i].x, allBullets[player][i].y, players[person].x, players[person].y) < players[person].r/2 && person != socket.id){
-                            io.to(socket.id).emit('removeBullets', i);
-                            players[person].health -= players[allBullets[player][i].shooter].weapon.damage;
-                            allBullets[player].splice(i, 1);
-                        }
-                    }
-                }
-            }
-            if (players[person].health <= 0){
-                
-                delete allBullets[person];
-                io.to(person).emit('dead', 1);
-                delete players[person];
+
+    socket.on('reload', function(dir){
+        if (players[socket.id].isReloading == false){
+            players[socket.id].isReloading = true;
+            players[socket.id].playerReloadingTime = gameTime;
+            if (players[socket.id].reserveAmmo + players[socket.id].ammo >= players[socket.id].clipAmmo){
+                players[socket.id].reserveAmmo += players[socket.id].ammo;
+                players[socket.id].ammo = players[socket.id].clipAmmo;
+                players[socket.id].reserveAmmo -= players[socket.id].clipAmmo;
+            } else {
+                players[socket.id].ammo = players[socket.id].reserveAmmo + players[socket.id].ammo;
+                players[socket.id].reserveAmmo = 0;
             }
         }
     })
 
-    //catch ammo decrease
-    socket.on('decreaseAmmo', function(decreaseAmount){
-        if(players[socket.id].weapon.canFire()){
-            players[socket.id].weapon.ammo -= decreaseAmount;
-            //emit something telling the client to add bullet
-            socket.emit('shootBullet', 1);
+    socket.on('shoot', function(pos){
+        if (gameTime - players[socket.id].timeLastShot > players[socket.id].fireRate && players[socket.id].ammo > 0 && players[socket.id].isReloading == false){
+            bullets.push(new Bullet(players[socket.id].x, players[socket.id].y, pos[0], pos[1], socket.id, players[socket.id].bulletSpeed));
+            players[socket.id].timeLastShot = gameTime;
+            players[socket.id].ammo -= 1;
         }
-    })
-    // reload
-    socket.on('reload', function(){
-        if (players[socket.id].weapon.reserveAmmo > players[socket.id].weapon.clipAmmo){
-            players[socket.id].weapon.reserveAmmo -= players[socket.id].weapon.clipAmmo - players[socket.id].weapon.ammo;
-            players[socket.id].weapon.ammo = players[socket.id].weapon.clipAmmo;
-        } else if (players[socket.id].weapon.reserveAmmo != 0){
-            players[socket.id].weapon.ammo = players[socket.id].weapon.reserveAmmo;
-            players[socket.id].weapon.reserveAmmo = 0;
-        }
-
     })
 
     function processUsername(usernameList) { //[username, class]
@@ -183,6 +169,7 @@ function newConnection(socket){
         }
         players[socket.id] = player;
         socket.emit('gameStart', 1);
+        start = true;// note
     }
 
 }
@@ -225,3 +212,48 @@ function checkCollision(player, walls, dir){
     return true;
 }
 
+function wallBulletDetect(rect, circle){
+    leftSide = rect.x;
+    rightSide = rect.x + rect.length;
+    topSide = rect.y;
+    botSide = rect.y + rect.width;
+    if (circle.x > leftSide && circle.x < rightSide && circle.y > topSide && circle.y < botSide){
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function checkBulletCollision (){
+    for (var c = 0; c < walls.length; c++){
+        for (var i = bullets.length - 1; i >= 0; i --){
+            if (wallBulletDetect(walls[c], bullets[i])){
+                bullets.splice(i, 1);
+            }
+        }
+    }
+
+    for (player in players){
+        for (var i = bullets.length - 1; i >= 0; i --){
+            if (distance(players[player].x, players[player].y, bullets[i].x, bullets[i].y) < bullets[i].r/2 + players[player].r/2 && bullets[i].shooter != player){
+                players[player].health -= players[bullets[i].shooter].damage;
+                bullets.splice(i, 1);
+            }
+        }
+        if (players[player].health <= 0){
+            delete players[player];
+        }
+    }
+}
+
+function randint(upperNum, lowerNum){
+    return Math.floor(Math.random() * upperNum) + lowerNum;
+}
+
+function reloadCheck(){
+    for (player in players){
+        if (gameTime - players[player].playerReloadingTime > players[player].reloadTime){
+            players[player].isReloading = false;
+        }
+    }
+}
