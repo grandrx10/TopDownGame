@@ -141,7 +141,9 @@ function newConnection(socket){
     socket.on('username',processUsername);
 
     socket.on('move', function(dir){
-        players[socket.id].move(dir);
+        if (players[socket.id] != undefined){
+            players[socket.id].move(dir);
+        }
     })
 
     socket.on('reload', function(dir){
@@ -264,6 +266,11 @@ function reloadCheck(){
 function killPlayers(){
     for (player in players){
         if (players[player].health <= 0){
+            for (i = bullets.length-1; i >= 0; i--){
+                if (bullets[i].shooter == player){
+                    bullets.splice(i, 1);
+                }
+            }
             delete players[player];
         }
     }
