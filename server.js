@@ -27,7 +27,7 @@ function Player(username, characterType, x, y){
         this.clipAmmo = 5;
         this.damage = 60;
         this.inaccuracy = 0;
-        this.bulletSpeed = 40;
+        this.bulletSpeed = 30;
         this.fireRate = 1000;
         this.reloadTime = 2000;
     }
