@@ -262,7 +262,9 @@ function reloadCheck(){
 }
 
 function killPlayers(){
-    if (players[player].health <= 0){
-        delete players[player];
+    for (player in players){
+        if (players[player].health <= 0){
+            delete players[player];
+        }
     }
 }
