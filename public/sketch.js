@@ -139,9 +139,11 @@ function draw() {
 
 function showAll(players){
     background(128, 128, 128);
-    xRange = players[socket.id].x - width/2;
-    yRange = players[socket.id].y - height/2;
     players2 = players;
+    if (players[socket.id] != undefined){
+        xRange = players[socket.id].x - width/2;
+        yRange = players[socket.id].y - height/2;
+    }
     
 }
 
