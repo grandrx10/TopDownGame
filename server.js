@@ -128,7 +128,7 @@ setInterval(function () {
 setInterval(function () {
   d = new Date();
   gameTime = d.getTime();
-}, 1);
+}, 10);
 
 function newConnection(socket){
 
