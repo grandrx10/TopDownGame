@@ -75,9 +75,11 @@ function draw() {
                 socket.emit('move', 'right');
             }
 
-            if (mouseIsPressed){
-                socket.emit('shoot', [mouseX - 600 + players2[socket.id].x, mouseY - 300 + players2[socket.id].y]);
-                console.log(mouseX - 600 + players2[socket.id].x , mouseY - 300 + players2[socket.id].y);
+            if (players2[socket.id] != undefined){
+                if (mouseIsPressed){
+                    socket.emit('shoot', [mouseX - 600 + players2[socket.id].x, mouseY - 300 + players2[socket.id].y]);
+                    console.log(mouseX - 600 + players2[socket.id].x , mouseY - 300 + players2[socket.id].y);
+                }
             }
 
             for (var i = 0; i < bullets.length; i++){
