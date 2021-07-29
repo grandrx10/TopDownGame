@@ -7,7 +7,14 @@ var players2;
 var userNameSubmitted = false;
 var gameTime;
 
-var walls = [];
+var walls = [new Wall(200, 200, 100, 100), new Wall(500, 200, 20, 300)];
+walls.push(new Wall(-100, -100, 10000, 100));
+walls.push(new Wall(-100, -100, 100, 10000));
+walls.push(new Wall(1000, -100, 100, 10000));
+walls.push(new Wall(-100, 1000, 10000, 100));
+walls.push(new Wall(200, 800, 200, 100));
+walls.push(new Wall(600, 650, 150, 150));
+walls.push(new Wall(750, 250, 500, 100));
 
 function Wall (x, y, length, width){
     this.x = x;
@@ -161,7 +168,7 @@ function showAllBullets(allBullets){
 
 function trackTime(time){
     gameTime = time[0];
-    walls = time[1];
+    //walls = time[1];
 }
 
 function keyPressed(){
