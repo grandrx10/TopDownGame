@@ -164,10 +164,12 @@ function newConnection(socket){
     })
 
     socket.on('shoot', function(pos){
-        if (gameTime - players[socket.id].timeLastShot > players[socket.id].fireRate && players[socket.id].ammo > 0 && players[socket.id].isReloading == false){
-            bullets.push(new Bullet(players[socket.id].x, players[socket.id].y, pos[0], pos[1], socket.id, players[socket.id].bulletSpeed));
-            players[socket.id].timeLastShot = gameTime;
-            players[socket.id].ammo -= 1;
+        if (players[socket.id] != undefined){
+            if (gameTime - players[socket.id].timeLastShot > players[socket.id].fireRate && players[socket.id].ammo > 0 && players[socket.id].isReloading == false){
+                bullets.push(new Bullet(players[socket.id].x, players[socket.id].y, pos[0], pos[1], socket.id, players[socket.id].bulletSpeed));
+                players[socket.id].timeLastShot = gameTime;
+                players[socket.id].ammo -= 1;
+            }
         }
     })
 
