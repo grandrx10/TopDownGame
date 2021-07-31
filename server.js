@@ -31,6 +31,26 @@ function Player(username, characterType, x, y){
         // this.fireRate = 1000;
         // this.reloadTime = 2000;
     }
+
+    if (this.weaponName == "rifle"){
+        this.ammo = 30;
+        this.reserveAmmo = 300;
+        this.clipAmmo = 30;
+        this.damage = 10;
+        this.inaccuracy = 10;
+        this.bulletSpeed = 15;
+        this.fireRate = 100;
+        this.reloadTime = 1000;
+    } else if (this.weaponName == "sniper"){
+        this.ammo = 5;
+        this.reserveAmmo = 40;
+        this.clipAmmo = 5;
+        this.damage = 60;
+        this.inaccuracy = 0;
+        this.bulletSpeed = 30;
+        this.fireRate = 1000;
+        this.reloadTime = 2000;
+    }
     this.timeLastShot = 0;
     //RELOAD TECHNIQUES
     this.playerReloadingTime = 0;
