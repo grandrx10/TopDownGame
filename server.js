@@ -12,24 +12,24 @@ function Player(username, characterType, x, y){
     // weapon name[0], ammo[1], reserve ammo[2], clip ammo[3], damage[4], inaccuracy[5], speed[6], fire rate[7], time last fired[8]
     if (this.characterType == "assualt"){
         this.weaponName = "rifle";
-        this.ammo = 30;
-        this.reserveAmmo = 300;
-        this.clipAmmo = 30;
-        this.damage = 10;
-        this.inaccuracy = 10;
-        this.bulletSpeed = 15;
-        this.fireRate = 100;
-        this.reloadTime = 1000;
+        // this.ammo = 30;
+        // this.reserveAmmo = 300;
+        // this.clipAmmo = 30;
+        // this.damage = 10;
+        // this.inaccuracy = 10;
+        // this.bulletSpeed = 15;
+        // this.fireRate = 100;
+        // this.reloadTime = 1000;
     } else if (this.characterType == "marksman"){
         this.weaponName = "sniper";
-        this.ammo = 5;
-        this.reserveAmmo = 40;
-        this.clipAmmo = 5;
-        this.damage = 60;
-        this.inaccuracy = 0;
-        this.bulletSpeed = 30;
-        this.fireRate = 1000;
-        this.reloadTime = 2000;
+        // this.ammo = 5;
+        // this.reserveAmmo = 40;
+        // this.clipAmmo = 5;
+        // this.damage = 60;
+        // this.inaccuracy = 0;
+        // this.bulletSpeed = 30;
+        // this.fireRate = 1000;
+        // this.reloadTime = 2000;
     }
     this.timeLastShot = 0;
     //RELOAD TECHNIQUES
@@ -57,7 +57,7 @@ function Wall (x, y, length, width){
     this.width = width;
 }
 
-function Bullet(x, y, aimX, aimY, shooter, speed) {
+function Bullet(x, y, aimX, aimY, shooter, speed, damage) {
     this.x = x;
     this.y = y;
     this.aimX = aimX;
@@ -66,6 +66,7 @@ function Bullet(x, y, aimX, aimY, shooter, speed) {
     this.shooter = shooter;
     this.travel = [aimX - x, aimY - y];
     this.speed = speed;
+    this.damage = damage;
     // this.normalVec = vector.normalize();
     // this.update = function(){
     //     this.x = this.x + normalVec.x;
@@ -166,7 +167,7 @@ function newConnection(socket){
     socket.on('shoot', function(pos){
         if (players[socket.id] != undefined){
             if (gameTime - players[socket.id].timeLastShot > players[socket.id].fireRate && players[socket.id].ammo > 0 && players[socket.id].isReloading == false){
-                bullets.push(new Bullet(players[socket.id].x, players[socket.id].y, pos[0], pos[1], socket.id, players[socket.id].bulletSpeed));
+                bullets.push(new Bullet(players[socket.id].x, players[socket.id].y, pos[0], pos[1], socket.id, players[socket.id].bulletSpeed, players[socket.id].damage));
                 players[socket.id].timeLastShot = gameTime;
                 players[socket.id].ammo -= 1;
             }
@@ -248,7 +249,7 @@ function checkBulletCollision (){
     for (player in players){
         for (var i = bullets.length - 1; i >= 0; i --){
             if (distance(players[player].x, players[player].y, bullets[i].x, bullets[i].y) < bullets[i].r/2 + players[player].r/2 && bullets[i].shooter != player){
-                players[player].health -= players[bullets[i].shooter].damage;
+                players[player].health -= bullets[i].damage;
                 bullets.splice(i, 1);
             }
         }
