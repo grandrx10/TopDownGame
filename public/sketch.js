@@ -68,6 +68,16 @@ function setup() {
 
 function draw() {
     if(userNameSubmitted){
+        for (var i = 0; i < bullets.length; i++){
+            fill(255);
+            ellipse(bullets[i].x - xRange, bullets[i].y - yRange, bullets[i].r);
+        }
+    
+        for(var i =0; i < walls.length; i++ ){
+            fill(105,105,105);
+            rect(walls[i].x - xRange, walls[i].y- yRange, walls[i].length, walls[i].width);
+        }
+
         if(players2 != null){
             if (keyIsDown(87)){ // up (w)
                 socket.emit('move', 'up');
@@ -86,16 +96,6 @@ function draw() {
                 if (players2[socket.id] != undefined){
                     socket.emit('shoot', [mouseX - 600 + players2[socket.id].x, mouseY - 300 + players2[socket.id].y]);
                 }
-            }
-
-            for (var i = 0; i < bullets.length; i++){
-                fill(255);
-                ellipse(bullets[i].x - xRange, bullets[i].y - yRange, bullets[i].r);
-            }
-        
-            for(var i =0; i <= walls.length - 1; i++ ){
-                fill(105,105,105);
-                rect(walls[i].x - xRange, walls[i].y- yRange, walls[i].length, walls[i].width);
             }
             // players
             for (let player in players2){
@@ -140,7 +140,6 @@ function draw() {
                 textSize(20);
                 text(players2[socket.id].ammo+ "/" + players2[socket.id].reserveAmmo, 1000, 500);
                 textSize(12);
-                line(width/2, height/2, mouseX, mouseY);
             }
         }
     }
@@ -154,13 +153,6 @@ function showAll(players){
         yRange = players[socket.id].y - height/2;
     }
 }
-
-// function simplifyBullets(){
-//     for (var i = 0; i < bullets.length; i ++){
-//         var simpleBullet = new SimpleBullet(bullets[i].pos.x, bullets[i].pos.y, bullets[i].r, bullets[i].shooter);
-//         simpleBullets[i] = simpleBullet;
-//     }
-// }
 
 function showAllBullets(allBullets){
     bullets = allBullets;
@@ -187,7 +179,3 @@ function startGame(){
         userNameSubmitted = false;
     })
 }
-
-// function mousePressed(){
-//     socket.emit('shoot', [mouseX - xRange, mouseY - yRange]);
-// }

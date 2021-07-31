@@ -147,16 +147,18 @@ function newConnection(socket){
     })
 
     socket.on('reload', function(dir){
-        if (players[socket.id].isReloading == false){
-            players[socket.id].isReloading = true;
-            players[socket.id].playerReloadingTime = gameTime;
-            if (players[socket.id].reserveAmmo + players[socket.id].ammo >= players[socket.id].clipAmmo){
-                players[socket.id].reserveAmmo += players[socket.id].ammo;
-                players[socket.id].ammo = players[socket.id].clipAmmo;
-                players[socket.id].reserveAmmo -= players[socket.id].clipAmmo;
-            } else {
-                players[socket.id].ammo = players[socket.id].reserveAmmo + players[socket.id].ammo;
-                players[socket.id].reserveAmmo = 0;
+        if (players[socket.id] != undefined){
+            if (players[socket.id].isReloading == false){
+                players[socket.id].isReloading = true;
+                players[socket.id].playerReloadingTime = gameTime;
+                if (players[socket.id].reserveAmmo + players[socket.id].ammo >= players[socket.id].clipAmmo){
+                    players[socket.id].reserveAmmo += players[socket.id].ammo;
+                    players[socket.id].ammo = players[socket.id].clipAmmo;
+                    players[socket.id].reserveAmmo -= players[socket.id].clipAmmo;
+                } else {
+                    players[socket.id].ammo = players[socket.id].reserveAmmo + players[socket.id].ammo;
+                    players[socket.id].reserveAmmo = 0;
+                }
             }
         }
     })
