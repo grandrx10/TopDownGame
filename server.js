@@ -9,47 +9,11 @@ function Player(username, characterType, x, y){
     this.r = 50;
     this.health = 100;
     this.maxHealth = 100;
-    // weapon name[0], ammo[1], reserve ammo[2], clip ammo[3], damage[4], inaccuracy[5], speed[6], fire rate[7], time last fired[8]
+    this.canPickup = "none";
     if (this.characterType == "assualt"){
-        this.weaponName = "rifle";
-        // this.ammo = 30;
-        // this.reserveAmmo = 300;
-        // this.clipAmmo = 30;
-        // this.damage = 10;
-        // this.inaccuracy = 10;
-        // this.bulletSpeed = 15;
-        // this.fireRate = 100;
-        // this.reloadTime = 1000;
-    } else if (this.characterType == "marksman"){
-        this.weaponName = "sniper";
-        // this.ammo = 5;
-        // this.reserveAmmo = 40;
-        // this.clipAmmo = 5;
-        // this.damage = 60;
-        // this.inaccuracy = 0;
-        // this.bulletSpeed = 30;
-        // this.fireRate = 1000;
-        // this.reloadTime = 2000;
-    }
-
-    if (this.weaponName == "rifle"){
-        this.ammo = 30;
-        this.reserveAmmo = 300;
-        this.clipAmmo = 30;
-        this.damage = 10;
-        this.inaccuracy = 10;
-        this.bulletSpeed = 15;
-        this.fireRate = 100;
-        this.reloadTime = 1000;
-    } else if (this.weaponName == "sniper"){
-        this.ammo = 5;
-        this.reserveAmmo = 40;
-        this.clipAmmo = 5;
-        this.damage = 60;
-        this.inaccuracy = 0;
-        this.bulletSpeed = 30;
-        this.fireRate = 1000;
-        this.reloadTime = 2000;
+        this.weaponName = "Rifle";
+    } else if (this.characterType == "alien"){
+        this.weaponName = "Melee";
     }
     this.timeLastShot = 0;
     //RELOAD TECHNIQUES
@@ -68,6 +32,54 @@ function Player(username, characterType, x, y){
             this.x += this.xSpeed;
         }
     }
+
+    this.updateGun = function(){
+        if (this.weaponName == "Rifle"){
+            this.ammo = 30;
+            this.reserveAmmo = 300;
+            this.clipAmmo = 30;
+            this.damage = 15;
+            this.inaccuracy = 10;
+            this.bulletSpeed = 20;
+            this.fireRate = 100;
+            this.reloadTime = 1000;
+            this.xSpeed = 5;
+            this.ySpeed = 5;
+        } else if (this.weaponName == "Sniper"){
+            this.ammo = 5;
+            this.reserveAmmo = 40;
+            this.clipAmmo = 5;
+            this.damage = 60;
+            this.inaccuracy = 0;
+            this.bulletSpeed = 30;
+            this.fireRate = 1000;
+            this.reloadTime = 2000;
+            this.xSpeed = 5;
+            this.ySpeed = 5;
+        } else if (this.weaponName == "Minigun"){
+            this.ammo = 200;
+            this.reserveAmmo = 1000;
+            this.clipAmmo = 200;
+            this.damage = 10;
+            this.inaccuracy = 0;
+            this.bulletSpeed = 15;
+            this.fireRate = 20;
+            this.reloadTime = 2000;
+            this.xSpeed = 4;
+            this.ySpeed = 4;
+        } else if (this.weaponName == "Melee"){
+            this.ammo = 0;
+            this.reserveAmmo = 0;
+            this.clipAmmo = 0;
+            this.damage = 15;
+            this.inaccuracy = 0;
+            this.bulletSpeed = 0;
+            this.fireRate = 100;
+            this.reloadTime = 0;
+            this.xSpeed = 8;
+            this.ySpeed = 8;
+        }
+    }
 }
 
 function Wall (x, y, length, width){
@@ -75,6 +87,14 @@ function Wall (x, y, length, width){
     this.y = y;
     this.length = length;
     this.width = width;
+}
+
+function Item (x, y, length, width, name){
+    this.x =x;
+    this.y = y;
+    this.length = length;
+    this.width = width;
+    this.name = name;
 }
 
 function Bullet(x, y, aimX, aimY, shooter, speed, damage) {
@@ -108,9 +128,12 @@ walls.push(new Wall(200, 800, 200, 100));
 walls.push(new Wall(600, 650, 150, 150));
 walls.push(new Wall(750, 250, 500, 100));
 
+var items = [new Item(500, 700, 40, 20, "Sniper"), new Item(50, 50, 40, 20, "Minigun")];
+
 var bullets = [];
 var d = new Date();
 var gameTime = d.getTime();
+var startTime = d.getTime();
 var start = false; // note
 
 //measuring tools
@@ -138,12 +161,14 @@ setInterval(function () {
     killPlayers();
     io.sockets.emit('update', players);
     io.sockets.emit('bulletUpdate', bullets);
-    io.sockets.emit('updateTime', [gameTime, walls]);
+    io.sockets.emit('updateTime', [gameTime, walls, items]);
     for (bullet of bullets){
         bullet.updateBulletLocation();
     }
     checkBulletCollision();
     reloadCheck();
+    pickupCheck();
+    spawnItems();
 }, 10);
 
 setInterval(function () {
@@ -167,7 +192,7 @@ function newConnection(socket){
         }
     })
 
-    socket.on('reload', function(dir){
+    socket.on('reload', function(){
         if (players[socket.id] != undefined){
             if (players[socket.id].isReloading == false){
                 players[socket.id].isReloading = true;
@@ -186,10 +211,33 @@ function newConnection(socket){
 
     socket.on('shoot', function(pos){
         if (players[socket.id] != undefined){
-            if (gameTime - players[socket.id].timeLastShot > players[socket.id].fireRate && players[socket.id].ammo > 0 && players[socket.id].isReloading == false){
-                bullets.push(new Bullet(players[socket.id].x, players[socket.id].y, pos[0], pos[1], socket.id, players[socket.id].bulletSpeed, players[socket.id].damage));
-                players[socket.id].timeLastShot = gameTime;
-                players[socket.id].ammo -= 1;
+            if (players[socket.id].weaponName == "Melee"){
+                if (gameTime - players[socket.id].timeLastShot > players[socket.id].fireRate){
+                    players[socket.id].timeLastShot = gameTime;
+                    for (player in players){
+                        if (player != socket.id && distance(players[player].x, players[player].y, players[socket.id].x, players[socket.id].y) < 150){
+                            players[player].health -= players[socket.id].damage;
+                        }
+                    }
+                }
+            } else{
+                if (gameTime - players[socket.id].timeLastShot > players[socket.id].fireRate && players[socket.id].ammo > 0 && players[socket.id].isReloading == false){
+                    bullets.push(new Bullet(players[socket.id].x, players[socket.id].y, pos[0], pos[1], socket.id, players[socket.id].bulletSpeed, players[socket.id].damage));
+                    players[socket.id].timeLastShot = gameTime;
+                    players[socket.id].ammo -= 1;
+                }
+            }
+        }
+    })
+
+    socket.on('pickup', function(){
+        if (players[socket.id] != undefined){
+            if (players[socket.id].canPickup != "none"){
+                players[socket.id].weaponName = players[socket.id].canPickup;
+                players[socket.id].updateGun();
+                if (findClosest(players[socket.id], items) != -1){
+                    items.splice(findClosest(players[socket.id], items), 1);
+                }
             }
         }
     })
@@ -201,14 +249,11 @@ function newConnection(socket){
             var player = new Player(usernameList[0], usernameList[1], Math.random() * 600, Math.random()* 600);
         }
         players[socket.id] = player;
+        players[socket.id].updateGun();
         socket.emit('gameStart', 1);
         start = true;// note
     }
 
-}
-
-function distance(x1, y1, x2, y2){
-    return Math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
 }
 
 function checkCollision(player, walls, dir){
@@ -245,12 +290,12 @@ function checkCollision(player, walls, dir){
     return true;
 }
 
-function wallBulletDetect(rect, circle){
+function rectCircDetect(rect, circle){
     leftSide = rect.x;
     rightSide = rect.x + rect.length;
     topSide = rect.y;
     botSide = rect.y + rect.width;
-    if (circle.x > leftSide && circle.x < rightSide && circle.y > topSide && circle.y < botSide){
+    if (circle.x + circle.r/2 > leftSide && circle.x - circle.r/2 < rightSide && circle.y + circle.r/2> topSide && circle.y - circle.r/2< botSide){
         return true;
     } else {
         return false;
@@ -260,7 +305,7 @@ function wallBulletDetect(rect, circle){
 function checkBulletCollision (){
     for (var c = 0; c < walls.length; c++){
         for (var i = bullets.length - 1; i >= 0; i --){
-            if (wallBulletDetect(walls[c], bullets[i])){
+            if (rectCircDetect(walls[c], bullets[i])){
                 bullets.splice(i, 1);
             }
         }
@@ -276,7 +321,39 @@ function checkBulletCollision (){
     }
 }
 
-function randint(upperNum, lowerNum){
+function pickupCheck(){
+    for (player in players){
+            players[player].canPickup = "none";
+    }
+    for (var c = 0; c < items.length; c++){
+        for (player in players){
+            if (rectCircDetect(items[c], players[player])){
+                players[player].canPickup = items[c].name;
+            }
+        }
+    }
+    if (items.length == 0){
+        players[player].canPickup = "none";
+    }
+}
+
+function findClosest(location, list){
+    var closest = -1;
+    var closestDistance = 10000000;
+    for (i = 0; i < list.length; i++){
+        if (distance(location.x, location.y, list[i].x, list[i].y) < closestDistance){
+            closest = i;
+            closestDistance = distance(location.x, location.y, list[i].x, list[i].y);
+        }
+    }
+    return closest;
+}
+
+function distance(x1, y1, x2, y2){
+    return Math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
+}
+
+function randint(lowerNum, upperNum){
     return Math.floor(Math.random() * upperNum) + lowerNum;
 }
 
@@ -298,5 +375,12 @@ function killPlayers(){
             }
             delete players[player];
         }
+    }
+}
+
+function spawnItems(){
+    if (Math.round(gameTime - startTime) % 3000 == 0 && items.length < 2){
+        items.push(new Item(randint(0, 1000), randint(0, 1000), 40, 20, "Sniper"));
+        items.push(new Item(randint(0, 1000), randint(0, 1000), 40, 20, "Minigun"));
     }
 }

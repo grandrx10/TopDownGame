@@ -1,20 +1,13 @@
-
 var socket;
 var xRange;
 var yRange;
 var bullets = [];
+var items = [];
 var players2;
 var userNameSubmitted = false;
 var gameTime;
 
-var walls = [new Wall(200, 200, 100, 100), new Wall(500, 200, 20, 300)];
-walls.push(new Wall(-100, -100, 10000, 100));
-walls.push(new Wall(-100, -100, 100, 10000));
-walls.push(new Wall(1000, -100, 100, 10000));
-walls.push(new Wall(-100, 1000, 10000, 100));
-walls.push(new Wall(200, 800, 200, 100));
-walls.push(new Wall(600, 650, 150, 150));
-walls.push(new Wall(750, 250, 500, 100));
+var walls = []
 
 function Wall (x, y, length, width){
     this.x = x;
@@ -78,6 +71,11 @@ function draw() {
             rect(walls[i].x - xRange, walls[i].y- yRange, walls[i].length, walls[i].width);
         }
 
+        for(var i =0; i < items.length; i++ ){
+            fill(252, 36, 3);
+            rect(items[i].x - xRange, items[i].y- yRange, items[i].length, items[i].width);
+        }
+
         if(players2 != null){
             if (keyIsDown(87)){ // up (w)
                 socket.emit('move', 'up');
@@ -105,7 +103,7 @@ function draw() {
                     text(players2[player].username, players2[player].x - xRange, players2[player].y - yRange - 50);
                     textAlign(LEFT);
                     fill(255);
-                    ellipse(players2[player].x - xRange, players2[player].y - yRange, 50, 50);
+                    ellipse(players2[player].x - xRange, players2[player].y - yRange, players2[player].r, players2[player].r);
                     fill(0);
                     rect(players2[player].x - xRange - 25, players2[player].y - yRange - 40, 50, 10);
                     fill(50,205,50);
@@ -119,7 +117,6 @@ function draw() {
                     fill(255);
                     rect(players2[player].x - xRange - 25, players2[player].y - yRange - 75, 50*(gameTime - players2[player].playerReloadingTime)/players2[player].reloadTime, 10);
                 }
-        
             }
 
             if (players2[socket.id] != undefined){
@@ -137,8 +134,15 @@ function draw() {
 
                 fill(0);
                 textAlign(CENTER);
+                textSize(25);
+                text(players2[socket.id].weaponName, 1000, 470);
                 textSize(20);
                 text(players2[socket.id].ammo+ "/" + players2[socket.id].reserveAmmo, 1000, 500);
+
+                if (players2[socket.id].canPickup != "none"){
+                    text("Press E to pick up " + players2[socket.id].canPickup, 600, 500);
+                }
+
                 textSize(12);
             }
         }
@@ -160,13 +164,16 @@ function showAllBullets(allBullets){
 
 function trackTime(time){
     gameTime = time[0];
-    //walls = time[1];
+    walls = time[1];
+    items = time[2];
 }
 
 function keyPressed(){
     if (userNameSubmitted){
         if (keyIsDown(82)){ // reload (r)
             socket.emit('reload', 1);
+        } else if (keyIsDown(69)){ // pickup (e)
+            socket.emit('pickup', 1);
         }
     }
 }
