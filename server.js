@@ -10,6 +10,8 @@ function Player(username, characterType, x, y){
     this.health = 100;
     this.maxHealth = 100;
     this.canPickup = "none";
+    this.power = 100;
+    this.powerUsage = "Medium";
     if (this.characterType == "assualt"){
         this.weaponName = "Rifle";
     } else if (this.characterType == "alien"){
@@ -33,10 +35,26 @@ function Player(username, characterType, x, y){
         }
     }
 
+    this.checkLocation = function(){
+        var collision = true;
+        while (collision == true){
+            collision = false;
+            for (i = 0; i < walls.length; i++){
+                if (rectCircDetect(walls[i], this)){
+                    collision = true;
+                }
+            }
+            if (collision){
+                this.x = randint(0, 1800);
+                this.y = randint(0, 2300);
+            }
+        }
+    }
+
     this.updateGun = function(){
         if (this.weaponName == "Rifle"){
             this.ammo = 30;
-            this.reserveAmmo = 300;
+            this.reserveAmmo = 90;
             this.clipAmmo = 30;
             this.damage = 15;
             this.inaccuracy = 10;
@@ -47,7 +65,7 @@ function Player(username, characterType, x, y){
             this.ySpeed = 5;
         } else if (this.weaponName == "Sniper"){
             this.ammo = 5;
-            this.reserveAmmo = 40;
+            this.reserveAmmo = 10;
             this.clipAmmo = 5;
             this.damage = 60;
             this.inaccuracy = 0;
@@ -58,7 +76,7 @@ function Player(username, characterType, x, y){
             this.ySpeed = 5;
         } else if (this.weaponName == "Minigun"){
             this.ammo = 200;
-            this.reserveAmmo = 1000;
+            this.reserveAmmo = 200;
             this.clipAmmo = 200;
             this.damage = 10;
             this.inaccuracy = 0;
@@ -89,12 +107,13 @@ function Wall (x, y, length, width){
     this.width = width;
 }
 
-function Item (x, y, length, width, name){
+function Item (x, y, length, width, name, type){
     this.x =x;
     this.y = y;
     this.length = length;
     this.width = width;
     this.name = name;
+    this.type = type;
 }
 
 function Bullet(x, y, aimX, aimY, shooter, speed, damage) {
@@ -119,16 +138,50 @@ function Bullet(x, y, aimX, aimY, shooter, speed, damage) {
 }
 
 var players = {};
-var walls = [new Wall(200, 200, 100, 100), new Wall(500, 200, 20, 300)];
+// var walls = [new Wall(200, 200, 100, 100), new Wall(500, 200, 20, 300)];
+var walls = [];
 walls.push(new Wall(-100, -100, 10000, 100));
 walls.push(new Wall(-100, -100, 100, 10000));
-walls.push(new Wall(1000, -100, 100, 10000));
-walls.push(new Wall(-100, 1000, 10000, 100));
-walls.push(new Wall(200, 800, 200, 100));
-walls.push(new Wall(600, 650, 150, 150));
-walls.push(new Wall(750, 250, 500, 100));
+walls.push(new Wall(1000, 0, 100, 500));
+walls.push(new Wall(1000, 700, 100, 1200));
+walls.push(new Wall(0, 1000, 400, 100));
+walls.push(new Wall(600, 1000, 400, 100));
+walls.push(new Wall(300, 1100, 100, 300));
+walls.push(new Wall(600, 1100, 100, 300));
+walls.push(new Wall(300, 1500, 100, 200));
+walls.push(new Wall(600, 1500, 100, 200));
+walls.push(new Wall(0, 1700, 400, 100));
+walls.push(new Wall(600, 1700, 400, 100));
+walls.push(new Wall(0, 2300, 2200, 100));
+walls.push(new Wall(1000, 2100, 100, 500));
+// Right side
+walls.push(new Wall(1100, 200, 300, 100));
+walls.push(new Wall(1500, 200, 400, 100));
+walls.push(new Wall(1800, 300, 100, 2600));
+walls.push(new Wall(1800, 0, 100, 200));
 
-var items = [new Item(500, 700, 40, 20, "Sniper"), new Item(50, 50, 40, 20, "Minigun")];
+
+//top left boxes
+walls.push(new Wall(200, 100, 100, 200));
+walls.push(new Wall(700, 100, 100, 200));
+walls.push(new Wall(200, 700, 100, 200));
+walls.push(new Wall(700, 700, 100, 200));
+// right boxes
+walls.push(new Wall(1600, 900, 100, 100));
+walls.push(new Wall(1200, 1300, 100, 100));
+walls.push(new Wall(150, 1950, 100, 200));
+walls.push(new Wall(1500, 1650, 100, 100));
+
+// walls.push(new Wall(200, 800, 200, 100));
+// walls.push(new Wall(600, 650, 150, 150));
+// walls.push(new Wall(750, 250, 500, 100));
+
+var items = [];
+createItem(new Item(randint(0, 1800), randint(0, 2300), 40, 20, "Sniper", "weapon"));
+createItem(new Item(randint(0, 1800), randint(0, 2300), 40, 20, "Minigun", "weapon"));
+createItem(new Item(randint(0, 1800), randint(0, 2300), 20, 20, "Battery", "utility"))
+createItem(new Item(randint(0, 1800), randint(0, 2300), 20, 20, "Battery", "utility"));
+// x 1800 y 2300
 
 var bullets = [];
 var d = new Date();
@@ -169,6 +222,7 @@ setInterval(function () {
     reloadCheck();
     pickupCheck();
     spawnItems();
+    updatePower();
 }, 10);
 
 setInterval(function () {
@@ -215,7 +269,7 @@ function newConnection(socket){
                 if (gameTime - players[socket.id].timeLastShot > players[socket.id].fireRate){
                     players[socket.id].timeLastShot = gameTime;
                     for (player in players){
-                        if (player != socket.id && distance(players[player].x, players[player].y, players[socket.id].x, players[socket.id].y) < 150){
+                        if (player != socket.id && distance(players[player].x, players[player].y, players[socket.id].x, players[socket.id].y) < 120){
                             players[player].health -= players[socket.id].damage;
                         }
                     }
@@ -233,23 +287,43 @@ function newConnection(socket){
     socket.on('pickup', function(){
         if (players[socket.id] != undefined){
             if (players[socket.id].canPickup != "none"){
-                players[socket.id].weaponName = players[socket.id].canPickup;
-                players[socket.id].updateGun();
-                if (findClosest(players[socket.id], items) != -1){
+                if (items[findClosest(players[socket.id], items)].name == "Battery"){
                     items.splice(findClosest(players[socket.id], items), 1);
+                    players[socket.id].power += 50;
+                } else {
+                    players[socket.id].weaponName = players[socket.id].canPickup;
+                    players[socket.id].updateGun();
+                    if (findClosest(players[socket.id], items) != -1){
+                        items.splice(findClosest(players[socket.id], items), 1);
+                    }
                 }
+            }
+        }
+    })
+
+    socket.on('switchPower', function(){
+        if (players[socket.id] != undefined){
+            if (players[socket.id].powerUsage == "Off"){
+                players[socket.id].powerUsage = "Low";
+            } else if (players[socket.id].powerUsage == "Low"){
+                players[socket.id].powerUsage = "Medium";
+            } else if (players[socket.id].powerUsage == "Medium"){
+                players[socket.id].powerUsage = "High";
+            } else if (players[socket.id].powerUsage == "High"){
+                players[socket.id].powerUsage = "Off";
             }
         }
     })
 
     function processUsername(usernameList) { //[username, class]
         if(usernameList[0] == ""){
-            var player = new Player("Unnamed", usernameList[1], Math.random() * 600, Math.random()* 600);
+            var player = new Player("Unnamed", usernameList[1], randint(0, 1800), randint(0, 2300));
         } else {
-            var player = new Player(usernameList[0], usernameList[1], Math.random() * 600, Math.random()* 600);
+            var player = new Player(usernameList[0], usernameList[1], randint(0, 1800), randint(0, 2300));
         }
         players[socket.id] = player;
         players[socket.id].updateGun();
+        players[socket.id].checkLocation();
         socket.emit('gameStart', 1);
         start = true;// note
     }
@@ -296,6 +370,18 @@ function rectCircDetect(rect, circle){
     topSide = rect.y;
     botSide = rect.y + rect.width;
     if (circle.x + circle.r/2 > leftSide && circle.x - circle.r/2 < rightSide && circle.y + circle.r/2> topSide && circle.y - circle.r/2< botSide){
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function rectRectDetect(rect, rect2){
+    leftSide = rect.x;
+    rightSide = rect.x + rect.length;
+    topSide = rect.y;
+    botSide = rect.y + rect.width;
+    if (rect2.x + rect2.length > leftSide && rect2.x < rightSide && rect2.y + rect2.width> topSide && rect2.y < botSide){
         return true;
     } else {
         return false;
@@ -379,8 +465,49 @@ function killPlayers(){
 }
 
 function spawnItems(){
-    if (Math.round(gameTime - startTime) % 3000 == 0 && items.length < 2){
-        items.push(new Item(randint(0, 1000), randint(0, 1000), 40, 20, "Sniper"));
-        items.push(new Item(randint(0, 1000), randint(0, 1000), 40, 20, "Minigun"));
+    if (Math.round(gameTime - startTime) % 2000 == 0 && items.length < 6){
+        createItem(new Item(randint(0, 1800), randint(0, 2300), 40, 20, "Sniper", "weapon"));
+        createItem(new Item(randint(0, 1800), randint(0, 2300), 40, 20, "Rifle", "weapon"));
+        createItem(new Item(randint(0, 1800), randint(0, 2300), 40, 20, "Rifle", "weapon"));
+        createItem(new Item(randint(0, 1800), randint(0, 2300), 40, 20, "Minigun", "weapon"));
+        createItem(new Item(randint(0, 1800), randint(0, 2300), 20, 20, "Battery", "utility"));
+        createItem(new Item(randint(0, 1800), randint(0, 2300), 20, 20, "Battery", "utility"));
+    }
+}
+
+function createItem(item){
+    items.push(item);
+    var collision = true;
+    while (collision == true){
+        collision = false;
+        for (i = 0; i < walls.length; i ++){
+            if (rectRectDetect(walls[i], items[items.length -1])){
+                collision = true;
+            }
+        }
+        if (collision){
+            items[items.length-1].x = randint(0, 1800);
+            items[items.length-1].y = randint(0, 2300);
+        }
+    }
+}
+
+
+function updatePower(){
+    for (player in players){
+        if (players[player].powerUsage == "Low"){
+            players[player].power -= 0.01;
+        } else if (players[player].powerUsage == "Medium"){
+            players[player].power -= 0.02;
+        } else if (players[player].powerUsage == "High"){
+            players[player].power -= 0.04;
+        }
+        
+        if (players[player].power < 0){
+            players[player].powerUsage = "Off";
+            players[player].power = 0;
+        } else if (players[player].power > 100){
+            players[player].power = 100;
+        }
     }
 }

@@ -72,7 +72,11 @@ function draw() {
         }
 
         for(var i =0; i < items.length; i++ ){
-            fill(252, 36, 3);
+            if (items[i].type == "weapon"){
+                fill(252, 36, 3);
+            } else if (items[i].type == "utility"){
+                fill(32,178,170);
+            }
             rect(items[i].x - xRange, items[i].y- yRange, items[i].length, items[i].width);
         }
 
@@ -93,6 +97,7 @@ function draw() {
             if (mouseIsPressed){
                 if (players2[socket.id] != undefined){
                     socket.emit('shoot', [mouseX - 600 + players2[socket.id].x, mouseY - 300 + players2[socket.id].y]);
+                    console.log(mouseX - 600 + players2[socket.id].x, mouseY - 300 + players2[socket.id].y);
                 }
             }
             // players
@@ -120,8 +125,48 @@ function draw() {
             }
 
             if (players2[socket.id] != undefined){
+                // power and lighting here:
+                if (players2[socket.id].powerUsage == "Off"){
+                    fill(0);
+                    rect(0, 0, 1200, 200);
+                    rect(0, 0, 400, 600);
+                    rect(800, 0, 400, 600);
+                    rect(0, 400, 1200, 200);
+                } else if (players2[socket.id].powerUsage == "Low") {
+                    fill(0);
+                    rect(0, 0, 1200, 150);
+                    rect(0, 0, 300, 600);
+                    rect(900, 0, 300, 600);
+                    rect(0, 450, 1200, 150);
+                }
+                else if (players2[socket.id].powerUsage == "Medium") {
+                    fill(0);
+                    rect(0, 0, 1200, 100);
+                    rect(0, 0, 200, 600);
+                    rect(1000, 0, 200, 600);
+                    rect(0, 500, 1200, 100);
+                } else if (players2[socket.id].powerUsage == "High") {
+                    fill(0);
+                    rect(0, 0, 1200, 50);
+                    rect(0, 0, 100, 600);
+                    rect(1100, 0, 100, 600);
+                    rect(0, 550, 1200, 50);
+                }
+
+                // more hud
+                textAlign(CENTER);
+                fill(255);
+                textSize(25);
+                text("Battery", 200, 470);
+                textSize(20);
+                text(Math.round(players2[socket.id].power) + "%", 200, 500);
+                textSize(20);
+                text("Usage: " + players2[socket.id].powerUsage, 200, 530);
+
+                // draw player
                 fill(0);
                 textAlign(CENTER);
+                textSize(12);
                 text(players2[socket.id].username, width/2, height/2 - 50);
                 textAlign(LEFT);
                 fill(0,206,209);
@@ -131,8 +176,8 @@ function draw() {
                 fill(50,205,50);
                 rect(players2[socket.id].x - xRange - 25, players2[socket.id].y - yRange - 40, 50*players2[socket.id].health/players2[socket.id].maxHealth, 10);
             
-
-                fill(0);
+                //HUD
+                fill(255);
                 textAlign(CENTER);
                 textSize(25);
                 text(players2[socket.id].weaponName, 1000, 470);
@@ -174,6 +219,8 @@ function keyPressed(){
             socket.emit('reload', 1);
         } else if (keyIsDown(69)){ // pickup (e)
             socket.emit('pickup', 1);
+        } else if (keyIsDown(67)){ // switch power usage (c)
+            socket.emit('switchPower', 1);
         }
     }
 }
