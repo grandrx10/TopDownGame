@@ -6,6 +6,7 @@ var items = [];
 var players2;
 var userNameSubmitted = false;
 var gameTime;
+var timeSinceStart = 0;
 
 var walls = []
 
@@ -107,7 +108,11 @@ function draw() {
                     textAlign(CENTER);
                     text(players2[player].username, players2[player].x - xRange, players2[player].y - yRange - 50);
                     textAlign(LEFT);
-                    fill(255);
+                    if (players2[player].team == "human"){
+                        fill(173,216,230);
+                    } else {
+                        fill(152,251,152);
+                    }
                     ellipse(players2[player].x - xRange, players2[player].y - yRange, players2[player].r, players2[player].r);
                     fill(0);
                     rect(players2[player].x - xRange - 25, players2[player].y - yRange - 40, 50, 10);
@@ -156,10 +161,8 @@ function draw() {
                 // more hud
                 textAlign(CENTER);
                 fill(255);
-                textSize(25);
-                text("Battery", 200, 470);
                 textSize(20);
-                text(Math.round(players2[socket.id].power) + "%", 200, 500);
+                text("Battery: " + Math.round(players2[socket.id].power) + "%", 200, 500);
                 textSize(20);
                 text("Usage: " + players2[socket.id].powerUsage, 200, 530);
 
@@ -169,7 +172,11 @@ function draw() {
                 textSize(12);
                 text(players2[socket.id].username, width/2, height/2 - 50);
                 textAlign(LEFT);
-                fill(0,206,209);
+                if (players2[socket.id].team == "human"){
+                    fill(0,206,209);
+                } else {
+                    fill(0,128,0);
+                }
                 ellipse(width/2, height/2, 50, 50);
                 fill(0);
                 rect(players2[socket.id].x - xRange - 25, players2[socket.id].y - yRange - 40, 50, 10);
@@ -184,10 +191,30 @@ function draw() {
                 textSize(20);
                 text(players2[socket.id].ammo+ "/" + players2[socket.id].reserveAmmo, 1000, 500);
 
-                if (players2[socket.id].canPickup != "none"){
+                if (players2[socket.id].canPickup != "none" && players2[socket.id].team != "alien"){
                     text("Press E to pick up " + players2[socket.id].canPickup, 600, 500);
+                } else if (players2[socket.id].canOpen == true){
+                    text("Press F to open", 600, 520);
                 }
 
+                // INSTRUCTIONS FOR HUMANS AND ALIENS
+                fill(255);
+                textAlign(CENTER);
+                textSize(20);
+                if (players2[socket.id].team == "human"){
+                    text("You are Human", 600, 30);
+                    textSize(15);
+                    text("Survive until extraction", 600, 50);
+                } else if (players2[socket.id].team == "alien"){
+                    fill(128, 0, 0);
+                    text("You are Alien", 600, 30);
+                    textSize(15);
+                    text("Hunt the Humans", 600, 50);
+                }
+
+                textSize(20);
+                text("Extraction: " + Math.round(300 - timeSinceStart/1000) + "s", 200, 50);
+                
                 textSize(12);
             }
         }
@@ -211,16 +238,19 @@ function trackTime(time){
     gameTime = time[0];
     walls = time[1];
     items = time[2];
+    timeSinceStart = time[3];
 }
 
 function keyPressed(){
     if (userNameSubmitted){
         if (keyIsDown(82)){ // reload (r)
             socket.emit('reload', 1);
-        } else if (keyIsDown(69)){ // pickup (e)
+        } else if (keyIsDown(69) && players2[socket.id].team != "alien"){ // pickup (e)
             socket.emit('pickup', 1);
         } else if (keyIsDown(67)){ // switch power usage (c)
             socket.emit('switchPower', 1);
+        } else if (keyIsDown(70)){ // open doors (f)
+            socket.emit('openDoor', 1);
         }
     }
 }

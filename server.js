@@ -1,5 +1,5 @@
 
-function Player(username, characterType, x, y){
+function Player(username, characterType, x, y, team){
     this.username = username;
     this.characterType = characterType;
     this.x = x;
@@ -10,12 +10,15 @@ function Player(username, characterType, x, y){
     this.health = 100;
     this.maxHealth = 100;
     this.canPickup = "none";
+    this.canOpen = false;
     this.power = 100;
-    this.powerUsage = "Medium";
+    this.team = team;
     if (this.characterType == "assualt"){
-        this.weaponName = "Rifle";
+        this.weaponName = "None";
+        this.powerUsage = "Medium";
     } else if (this.characterType == "alien"){
         this.weaponName = "Melee";
+        this.powerUsage = "None";
     }
     this.timeLastShot = 0;
     //RELOAD TECHNIQUES
@@ -75,13 +78,13 @@ function Player(username, characterType, x, y){
             this.xSpeed = 5;
             this.ySpeed = 5;
         } else if (this.weaponName == "Minigun"){
-            this.ammo = 200;
-            this.reserveAmmo = 200;
-            this.clipAmmo = 200;
+            this.ammo = 100;
+            this.reserveAmmo = 100;
+            this.clipAmmo = 100;
             this.damage = 10;
             this.inaccuracy = 0;
             this.bulletSpeed = 15;
-            this.fireRate = 20;
+            this.fireRate = 30;
             this.reloadTime = 2000;
             this.xSpeed = 4;
             this.ySpeed = 4;
@@ -89,22 +92,34 @@ function Player(username, characterType, x, y){
             this.ammo = 0;
             this.reserveAmmo = 0;
             this.clipAmmo = 0;
-            this.damage = 15;
+            this.damage = 12;
             this.inaccuracy = 0;
             this.bulletSpeed = 0;
             this.fireRate = 100;
             this.reloadTime = 0;
-            this.xSpeed = 8;
-            this.ySpeed = 8;
+            this.xSpeed = 7;
+            this.ySpeed = 7;
+        } else if (this.weaponName == "None"){
+            this.ammo = 0;
+            this.reserveAmmo = 0;
+            this.clipAmmo = 0;
+            this.damage = 0;
+            this.inaccuracy = 0;
+            this.bulletSpeed = 0;
+            this.fireRate = 0;
+            this.reloadTime = 0;
+            this.xSpeed = 6;
+            this.ySpeed = 6;
         }
     }
 }
 
-function Wall (x, y, length, width){
+function Wall (x, y, length, width, type){
     this.x = x;
     this.y = y;
     this.length = length;
     this.width = width;
+    this.type = type;
 }
 
 function Item (x, y, length, width, name, type){
@@ -172,22 +187,26 @@ walls.push(new Wall(1200, 1300, 100, 100));
 walls.push(new Wall(150, 1950, 100, 200));
 walls.push(new Wall(1500, 1650, 100, 100));
 
-// walls.push(new Wall(200, 800, 200, 100));
-// walls.push(new Wall(600, 650, 150, 150));
-// walls.push(new Wall(750, 250, 500, 100));
+// door
+//walls.push(new Wall(400, 1025, 200, 50, "door"));
+// (400, 1025, 200, 50, 0)
+
 
 var items = [];
 createItem(new Item(randint(0, 1800), randint(0, 2300), 40, 20, "Sniper", "weapon"));
 createItem(new Item(randint(0, 1800), randint(0, 2300), 40, 20, "Minigun", "weapon"));
 createItem(new Item(randint(0, 1800), randint(0, 2300), 20, 20, "Battery", "utility"))
 createItem(new Item(randint(0, 1800), randint(0, 2300), 20, 20, "Battery", "utility"));
+createItem(new Item(randint(0, 1800), randint(0, 2300), 30, 30, "Health Pack", "utility"));
 // x 1800 y 2300
 
 var bullets = [];
+
 var d = new Date();
 var gameTime = d.getTime();
 var startTime = d.getTime();
 var start = false; // note
+var timeSinceStart = 0;
 
 //measuring tools
 var leftSide;
@@ -214,13 +233,14 @@ setInterval(function () {
     killPlayers();
     io.sockets.emit('update', players);
     io.sockets.emit('bulletUpdate', bullets);
-    io.sockets.emit('updateTime', [gameTime, walls, items]);
+    io.sockets.emit('updateTime', [gameTime, walls, items, timeSinceStart]);
     for (bullet of bullets){
         bullet.updateBulletLocation();
     }
     checkBulletCollision();
     reloadCheck();
     pickupCheck();
+    canOpenCheck();
     spawnItems();
     updatePower();
 }, 10);
@@ -228,6 +248,7 @@ setInterval(function () {
 setInterval(function () {
   d = new Date();
   gameTime = d.getTime();
+  timeSinceStart= gameTime - startTime;
 }, 10);
 
 function newConnection(socket){
@@ -289,14 +310,26 @@ function newConnection(socket){
             if (players[socket.id].canPickup != "none"){
                 if (items[findClosest(players[socket.id], items)].name == "Battery"){
                     items.splice(findClosest(players[socket.id], items), 1);
-                    players[socket.id].power += 50;
-                } else {
+                    players[socket.id].power += 40;
+                } else if (items[findClosest(players[socket.id], items)].name == "Health Pack"){
+                    items.splice(findClosest(players[socket.id], items), 1);
+                    players[socket.id].health += 40;
+                }
+                else {
                     players[socket.id].weaponName = players[socket.id].canPickup;
                     players[socket.id].updateGun();
                     if (findClosest(players[socket.id], items) != -1){
                         items.splice(findClosest(players[socket.id], items), 1);
                     }
                 }
+            }
+        }
+    })
+
+    socket.on('openDoor', function(){
+        if (players[socket.id] != undefined){
+            if (players[socket.id].canOpen && walls[findClosest(players[socket.id], walls)].type == "door") {
+                console.log("BINGO!");
             }
         }
     })
@@ -316,16 +349,24 @@ function newConnection(socket){
     })
 
     function processUsername(usernameList) { //[username, class]
-        if(usernameList[0] == ""){
-            var player = new Player("Unnamed", usernameList[1], randint(0, 1800), randint(0, 2300));
-        } else {
-            var player = new Player(usernameList[0], usernameList[1], randint(0, 1800), randint(0, 2300));
+        if (timeSinceStart< 10 * 1000) { // 10 seconds before game starts
+            if(usernameList[0] == ""){
+                var player = new Player("Unnamed", usernameList[1], randint(0, 1800), randint(0, 2300), "human");
+            } else {
+                var player = new Player(usernameList[0], usernameList[1], randint(0, 1800), randint(0, 2300), "human");
+            }
+        } else { // DUDE CHANGE THIS BACK!
+            if(usernameList[0] == ""){
+                var player = new Player("Unnamed", "human", randint(0, 1800), randint(0, 2300), "human");
+            } else {
+                var player = new Player(usernameList[0], "human", randint(0, 1800), randint(0, 2300), "human");
+            } 
         }
         players[socket.id] = player;
         players[socket.id].updateGun();
         players[socket.id].checkLocation();
         socket.emit('gameStart', 1);
-        start = true;// note
+        start = true; // note
     }
 
 }
@@ -399,7 +440,7 @@ function checkBulletCollision (){
 
     for (player in players){
         for (var i = bullets.length - 1; i >= 0; i --){
-            if (distance(players[player].x, players[player].y, bullets[i].x, bullets[i].y) < bullets[i].r/2 + players[player].r/2 && bullets[i].shooter != player){
+            if (distance(players[player].x, players[player].y, bullets[i].x, bullets[i].y) < bullets[i].r/2 + players[player].r/2 && bullets[i].shooter != player && players[player].team != players[bullets[i].shooter].team){
                 players[player].health -= bullets[i].damage;
                 bullets.splice(i, 1);
             }
@@ -423,13 +464,28 @@ function pickupCheck(){
     }
 }
 
+function canOpenCheck(){
+    for (player in players){
+        players[player].canOpen = false;
+    }
+    for (var c = 0; c < walls.length; c++){
+        for (player in players){
+            players[player].r = 100;
+            if (rectCircDetect(walls[c], players[player]) && walls[c].type == "door"){
+                players[player].canOpen = true;
+            }
+            players[player].r = 50;
+        }
+    }
+}
+
 function findClosest(location, list){
     var closest = -1;
     var closestDistance = 10000000;
     for (i = 0; i < list.length; i++){
         if (distance(location.x, location.y, list[i].x, list[i].y) < closestDistance){
             closest = i;
-            closestDistance = distance(location.x, location.y, list[i].x, list[i].y);
+            closestDistance = distance(location.x, location.y, list[i].x + list[i].length/2, list[i].y + list[i].width/2);
         }
     }
     return closest;
@@ -460,6 +516,8 @@ function killPlayers(){
                 }
             }
             delete players[player];
+        } else if (players[player].health > 100){
+            players[player].health = 100;
         }
     }
 }
@@ -472,6 +530,7 @@ function spawnItems(){
         createItem(new Item(randint(0, 1800), randint(0, 2300), 40, 20, "Minigun", "weapon"));
         createItem(new Item(randint(0, 1800), randint(0, 2300), 20, 20, "Battery", "utility"));
         createItem(new Item(randint(0, 1800), randint(0, 2300), 20, 20, "Battery", "utility"));
+        createItem(new Item(randint(0, 1800), randint(0, 2300), 30, 30, "Health Pack", "utility"));
     }
 }
 
@@ -496,11 +555,11 @@ function createItem(item){
 function updatePower(){
     for (player in players){
         if (players[player].powerUsage == "Low"){
-            players[player].power -= 0.01;
+            players[player].power -= 0.005;
         } else if (players[player].powerUsage == "Medium"){
-            players[player].power -= 0.02;
+            players[player].power -= 0.01;
         } else if (players[player].powerUsage == "High"){
-            players[player].power -= 0.04;
+            players[player].power -= 0.02;
         }
         
         if (players[player].power < 0){
