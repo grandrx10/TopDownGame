@@ -357,9 +357,9 @@ function newConnection(socket){
             }
         } else { // DUDE CHANGE THIS BACK!
             if(usernameList[0] == ""){
-                var player = new Player("Unnamed", "human", randint(0, 1800), randint(0, 2300), "human");
+                var player = new Player("Unnamed", usernameList[1], randint(0, 1800), randint(0, 2300), "human");
             } else {
-                var player = new Player(usernameList[0], "human", randint(0, 1800), randint(0, 2300), "human");
+                var player = new Player(usernameList[0], usernameList[1], randint(0, 1800), randint(0, 2300), "human");
             } 
         }
         players[socket.id] = player;
