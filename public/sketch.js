@@ -98,7 +98,6 @@ function draw() {
             if (mouseIsPressed){
                 if (players2[socket.id] != undefined){
                     socket.emit('shoot', [mouseX - 600 + players2[socket.id].x, mouseY - 300 + players2[socket.id].y]);
-                    console.log(mouseX - 600 + players2[socket.id].x, mouseY - 300 + players2[socket.id].y);
                 }
             }
             // players
