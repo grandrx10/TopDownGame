@@ -440,7 +440,7 @@ function checkBulletCollision (){
 
     for (player in players){
         for (var i = bullets.length - 1; i >= 0; i --){
-            if (distance(players[player].x, players[player].y, bullets[i].x, bullets[i].y) < bullets[i].r/2 + players[player].r/2 && bullets[i].shooter != player && players[player].team != players[bullets[i].shooter].team){
+            if (distance(players[player].x, players[player].y, bullets[i].x, bullets[i].y) < bullets[i].r/2 + players[player].r/2 && bullets[i].shooter != player){ // && players[player].team != players[bullets[i].shooter].team
                 players[player].health -= bullets[i].damage;
                 bullets.splice(i, 1);
             }
