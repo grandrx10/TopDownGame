@@ -668,7 +668,6 @@ function checkForHumanSurvivors(){
 
 function checkForEndGame(){
     if (gameTime - endGameTime > 10*1000 && endGameTime != 0){
-        console.log("YEAH< RESET");
         players = {};
         d = new Date();
         gameTime = d.getTime();
