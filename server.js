@@ -12,6 +12,9 @@ function Player(username, characterType, x, y, team){
     this.canPickup = "none";
     this.canOpen = false;
     this.power = 100;
+    this.lastMovedX = 0;
+    this.lastMovedY = 0;
+    
     this.team = team;
     if (this.characterType == "assualt"){
         this.weaponName = "None";
@@ -26,12 +29,15 @@ function Player(username, characterType, x, y, team){
     this.isReloading = false;
 
     // add update function Take in WASD and update X and Y
-    this.move = function(dir){
+    this.moveY = function(dir){
         if (dir == "up" && checkCollision(this, walls, "up")){
             this.y -= this.ySpeed;
         } else if (dir == "down" && checkCollision(this, walls, "down")){
             this.y += this.ySpeed;
-        } else if (dir == "left" && checkCollision(this, walls, "left")){
+        } 
+    }
+    this.moveX = function(dir){
+        if (dir == "left" && checkCollision(this, walls, "left")){
             this.x -= this.xSpeed;
         } else if (dir == "right" && checkCollision(this, walls, "right")){
             this.x += this.xSpeed;
@@ -48,8 +54,8 @@ function Player(username, characterType, x, y, team){
                 }
             }
             if (collision){
-                this.x = randint(0, 1800);
-                this.y = randint(0, 2300);
+                this.x = randint(0, mapLength);
+                this.y = randint(0, mapWidth);
             }
         }
     }
@@ -66,7 +72,19 @@ function Player(username, characterType, x, y, team){
             this.reloadTime = 1000;
             this.xSpeed = 5;
             this.ySpeed = 5;
-        } else if (this.weaponName == "Sniper"){
+        } else if (this.weaponName == "Pistol"){
+            this.ammo = 8;
+            this.reserveAmmo = 24;
+            this.clipAmmo = 8;
+            this.damage = 25;
+            this.inaccuracy = 10;
+            this.bulletSpeed = 18;
+            this.fireRate = 200;
+            this.reloadTime = 500;
+            this.xSpeed = 5;
+            this.ySpeed = 5;
+        } 
+        else if (this.weaponName == "Sniper"){
             this.ammo = 5;
             this.reserveAmmo = 10;
             this.clipAmmo = 5;
@@ -120,6 +138,11 @@ function Wall (x, y, length, width, type){
     this.length = length;
     this.width = width;
     this.type = type;
+    this.xSpeed = 0;
+    this.ySpeed = 0;
+    this.limitX = this.x + this.length;
+    this.limitY = this.y + this.width;
+    this.openedTime = 0;
 }
 
 function Item (x, y, length, width, name, type){
@@ -167,14 +190,33 @@ walls.push(new Wall(300, 1500, 100, 200));
 walls.push(new Wall(600, 1500, 100, 200));
 walls.push(new Wall(0, 1700, 400, 100));
 walls.push(new Wall(600, 1700, 400, 100));
-walls.push(new Wall(0, 2300, 2200, 100));
+walls.push(new Wall(0, 2300, 5000, 100));
 walls.push(new Wall(1000, 2100, 100, 500));
 // Right side
 walls.push(new Wall(1100, 200, 300, 100));
 walls.push(new Wall(1500, 200, 400, 100));
-walls.push(new Wall(1800, 300, 100, 2600));
+walls.push(new Wall(1800, 300, 100, 300));
 walls.push(new Wall(1800, 0, 100, 200));
 
+walls.push(new Wall(1800, 800, 100, 500));
+walls.push(new Wall(1800, 1500, 100, 1000));
+
+// right curve
+walls.push(new Wall(2200, 200, 100, 600));
+walls.push(new Wall(2200, 200, 600, 100));
+walls.push(new Wall(1900, 1150, 600, 100));
+walls.push(new Wall(2700, 1150, 800, 100));
+walls.push(new Wall(3400, 1000, 100, 300));
+walls.push(new Wall(2200, 950, 100, 600));
+walls.push(new Wall(3000, 200, 500, 100));
+walls.push(new Wall(3400, 300, 100, 500));
+walls.push(new Wall(3800, 0, 100, 4000));
+
+walls.push(new Wall(2200, 1750, 100, 300));
+walls.push(new Wall(2200, 2000, 1000, 100));
+walls.push(new Wall(2900, 1250, 100, 750));
+walls.push(new Wall(3400, 2000, 600, 100));
+walls.push(new Wall(3400, 1450, 100, 650));
 
 //top left boxes
 walls.push(new Wall(200, 100, 100, 200));
@@ -188,16 +230,26 @@ walls.push(new Wall(150, 1950, 100, 200));
 walls.push(new Wall(1500, 1650, 100, 100));
 
 // door
-//walls.push(new Wall(400, 1025, 200, 50, "door"));
-// (400, 1025, 200, 50, 0)
+walls.push(new Wall(400, 1025, 200, 50, "door"));
+walls.push(new Wall(325, 1400, 50, 100, "door"));
+walls.push(new Wall(625, 1400, 50, 100, "door"));
+walls.push(new Wall(400, 1725, 200, 50, "door"));
+walls.push(new Wall(1025, 1900, 50, 200, "door"));
+walls.push(new Wall(1025, 500, 50, 200, "door"));
+walls.push(new Wall(1400, 225, 100, 50, "door"));
+walls.push(new Wall(2800, 225, 200, 50, "door"));
+walls.push(new Wall(2225, 800, 50, 150, "door"));
+walls.push(new Wall(1825, 600, 50, 200, "door"));
+walls.push(new Wall(1825, 1300, 50, 200, "door"));
+walls.push(new Wall(2225, 1550, 50, 200, "door"));
+walls.push(new Wall(3425, 800, 50, 200, "door"));
+walls.push(new Wall(2500, 1175, 200, 50, "door"));
+walls.push(new Wall(3200, 2025, 200, 50, "door"));
+walls.push(new Wall(3425, 1300, 50, 150, "door"));
 
 
 var items = [];
-createItem(new Item(randint(0, 1800), randint(0, 2300), 40, 20, "Sniper", "weapon"));
-createItem(new Item(randint(0, 1800), randint(0, 2300), 40, 20, "Minigun", "weapon"));
-createItem(new Item(randint(0, 1800), randint(0, 2300), 20, 20, "Battery", "utility"))
-createItem(new Item(randint(0, 1800), randint(0, 2300), 20, 20, "Battery", "utility"));
-createItem(new Item(randint(0, 1800), randint(0, 2300), 30, 30, "Health Pack", "utility"));
+spawnStartItems();
 // x 1800 y 2300
 
 var bullets = [];
@@ -205,8 +257,13 @@ var bullets = [];
 var d = new Date();
 var gameTime = d.getTime();
 var startTime = d.getTime();
+var endGameTime = 0;
 var start = false; // note
 var timeSinceStart = 0;
+
+//map dimensions
+var mapLength = 3800;
+var mapWidth = 2300;
 
 //measuring tools
 var leftSide;
@@ -233,7 +290,7 @@ setInterval(function () {
     killPlayers();
     io.sockets.emit('update', players);
     io.sockets.emit('bulletUpdate', bullets);
-    io.sockets.emit('updateTime', [gameTime, walls, items, timeSinceStart]);
+    io.sockets.emit('updateTime', [gameTime, walls, items, timeSinceStart, endGameTime]);
     for (bullet of bullets){
         bullet.updateBulletLocation();
     }
@@ -243,6 +300,9 @@ setInterval(function () {
     canOpenCheck();
     spawnItems();
     updatePower();
+    doorUpdate();
+    checkForHumanSurvivors();
+    checkForEndGame();
 }, 10);
 
 setInterval(function () {
@@ -261,9 +321,21 @@ function newConnection(socket){
 
     socket.on('username',processUsername);
 
-    socket.on('move', function(dir){
+    socket.on('moveX', function(dir){
         if (players[socket.id] != undefined){
-            players[socket.id].move(dir);
+            if (gameTime - players[socket.id].lastMovedX > 10){
+                players[socket.id].moveX(dir);
+                players[socket.id].lastMovedX = gameTime;
+            }
+        }
+    })
+
+    socket.on('moveY', function(dir){
+        if (players[socket.id] != undefined){
+            if (gameTime - players[socket.id].lastMovedY > 10){
+                players[socket.id].moveY(dir);
+                players[socket.id].lastMovedY = gameTime;
+            }
         }
     })
 
@@ -329,7 +401,7 @@ function newConnection(socket){
     socket.on('openDoor', function(){
         if (players[socket.id] != undefined){
             if (players[socket.id].canOpen && walls[findClosest(players[socket.id], walls)].type == "door") {
-                console.log("BINGO!");
+                openDoor(findClosest(players[socket.id], walls));
             }
         }
     })
@@ -349,17 +421,17 @@ function newConnection(socket){
     })
 
     function processUsername(usernameList) { //[username, class]
-        if (timeSinceStart< 10 * 1000) { // 10 seconds before game starts
+        if (timeSinceStart< 20 * 1000) { // 10 seconds before game starts
             if(usernameList[0] == ""){
-                var player = new Player("Unnamed", usernameList[1], randint(0, 1800), randint(0, 2300), "human");
+                var player = new Player("Unnamed", usernameList[1], randint(0, mapLength), randint(0, mapWidth), "human");
             } else {
-                var player = new Player(usernameList[0], usernameList[1], randint(0, 1800), randint(0, 2300), "human");
+                var player = new Player(usernameList[0], usernameList[1], randint(0, mapLength), randint(0, mapWidth), "human");
             }
         } else { // DUDE CHANGE THIS BACK!
             if(usernameList[0] == ""){
-                var player = new Player("Unnamed", usernameList[1], randint(0, 1800), randint(0, 2300), "human");
+                var player = new Player("Unnamed", "alien", randint(0, mapLength), randint(0, mapWidth), "alien");
             } else {
-                var player = new Player(usernameList[0], usernameList[1], randint(0, 1800), randint(0, 2300), "human");
+                var player = new Player(usernameList[0], "alien", randint(0, mapLength), randint(0, mapWidth), "alien");
             } 
         }
         players[socket.id] = player;
@@ -440,7 +512,7 @@ function checkBulletCollision (){
 
     for (player in players){
         for (var i = bullets.length - 1; i >= 0; i --){
-            if (distance(players[player].x, players[player].y, bullets[i].x, bullets[i].y) < bullets[i].r/2 + players[player].r/2 && bullets[i].shooter != player){ // && players[player].team != players[bullets[i].shooter].team
+            if (distance(players[player].x, players[player].y, bullets[i].x, bullets[i].y) < bullets[i].r/2 + players[player].r/2 && bullets[i].shooter != player && players[player].team != players[bullets[i].shooter].team){ // 
                 players[player].health -= bullets[i].damage;
                 bullets.splice(i, 1);
             }
@@ -523,14 +595,14 @@ function killPlayers(){
 }
 
 function spawnItems(){
-    if (Math.round(gameTime - startTime) % 2000 == 0 && items.length < 6){
-        createItem(new Item(randint(0, 1800), randint(0, 2300), 40, 20, "Sniper", "weapon"));
-        createItem(new Item(randint(0, 1800), randint(0, 2300), 40, 20, "Rifle", "weapon"));
-        createItem(new Item(randint(0, 1800), randint(0, 2300), 40, 20, "Rifle", "weapon"));
-        createItem(new Item(randint(0, 1800), randint(0, 2300), 40, 20, "Minigun", "weapon"));
-        createItem(new Item(randint(0, 1800), randint(0, 2300), 20, 20, "Battery", "utility"));
-        createItem(new Item(randint(0, 1800), randint(0, 2300), 20, 20, "Battery", "utility"));
-        createItem(new Item(randint(0, 1800), randint(0, 2300), 30, 30, "Health Pack", "utility"));
+    if (Math.round(gameTime - startTime) % 2000 == 0 && items.length < 8){
+        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Sniper", "weapon"));
+        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Rifle", "weapon"));
+        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Rifle", "weapon"));
+        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Minigun", "weapon"));
+        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 20, 20, "Battery", "utility"));
+        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 20, 20, "Battery", "utility"));
+        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 30, 30, "Health Pack", "utility"));
     }
 }
 
@@ -545,8 +617,8 @@ function createItem(item){
             }
         }
         if (collision){
-            items[items.length-1].x = randint(0, 1800);
-            items[items.length-1].y = randint(0, 2300);
+            items[items.length-1].x = randint(0, mapLength);
+            items[items.length-1].y = randint(0, mapWidth);
         }
     }
 }
@@ -569,4 +641,81 @@ function updatePower(){
             players[player].power = 100;
         }
     }
+}
+
+function openDoor(i){
+    if (walls[i].length > walls[i].width){
+        walls[i].xSpeed = 1;
+    } else {
+        walls[i].ySpeed = 1;
+    }
+    walls[i].openedTime = gameTime;
+}
+
+function checkForHumanSurvivors(){
+    var surviving = false;
+    if (timeSinceStart > 20 * 1000){
+        for(player in players){
+            if (players[player].team == "human"){
+                surviving = true;
+            }
+        }
+        if (surviving == false && endGameTime == 0){
+            endGameTime = gameTime;
+        } 
+    }
+}
+
+function checkForEndGame(){
+    if (gameTime - endGameTime > 10*1000 && endGameTime != 0){
+        console.log("YEAH< RESET");
+        players = {};
+        d = new Date();
+        gameTime = d.getTime();
+        startTime = d.getTime();
+        endGameTime = 0;
+        items = [];
+        spawnStartItems();
+    }
+}
+
+function doorUpdate(){
+    for(i = 0; i< walls.length; i++){
+        walls[i].x += walls[i].xSpeed;
+        walls[i].y += walls[i].ySpeed;
+        if (walls[i].x > walls[i].limitX){
+            walls[i].xSpeed = -1;
+        } else if (walls[i].y > walls[i].limitY){
+            walls[i].ySpeed = -1;
+        }
+
+        if (walls[i].x <= walls[i].limitX - walls[i].length){
+            walls[i].xSpeed = 0;
+        }
+        if (walls[i].y <= walls[i].limitY - walls[i].width){
+            walls[i].ySpeed = 0;
+        }
+
+        for (player in players){
+            if (rectCircDetect(walls[i], players[player])){
+                if (walls[i].xSpeed < 0){
+                    players[player].x = walls[i].x - players[player].r/2;
+                } else if (walls[i].ySpeed < 0){
+                    players[player].y = walls[i].y - players[player].r/2;
+                }
+            }
+            if (rectCircDetect(walls[i], players[player])){
+                players[player].health -= 5;
+            }
+        }
+    }
+}
+
+function spawnStartItems(){
+    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Rifle", "weapon"));
+    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Pistol", "weapon"));
+    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Pistol", "weapon"));
+    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 20, 20, "Battery", "utility"))
+    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 20, 20, "Battery", "utility"));
+    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 30, 30, "Health Pack", "utility"));
 }

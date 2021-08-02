@@ -7,6 +7,7 @@ var players2;
 var userNameSubmitted = false;
 var gameTime;
 var timeSinceStart = 0;
+var endGameTime;
 
 var walls = []
 
@@ -68,7 +69,11 @@ function draw() {
         }
     
         for(var i =0; i < walls.length; i++ ){
-            fill(105,105,105);
+            if (walls[i].type == "door"){
+                fill(139,0,0);
+            } else {    
+                fill(105,105,105);
+            }
             rect(walls[i].x - xRange, walls[i].y- yRange, walls[i].length, walls[i].width);
         }
 
@@ -83,21 +88,22 @@ function draw() {
 
         if(players2 != null){
             if (keyIsDown(87)){ // up (w)
-                socket.emit('move', 'up');
+                socket.emit('moveY', 'up');
             }
             if (keyIsDown(83)){ // down (s)
-                socket.emit('move', 'down');
+                socket.emit('moveY', 'down');
             }
             if (keyIsDown(65)){ // left (a)
-                socket.emit('move', 'left');
+                socket.emit('moveX', 'left');
             }
             if (keyIsDown(68)){ // right (d)
-                socket.emit('move', 'right');
+                socket.emit('moveX', 'right');
             }
 
             if (mouseIsPressed){
                 if (players2[socket.id] != undefined){
                     socket.emit('shoot', [mouseX - 600 + players2[socket.id].x, mouseY - 300 + players2[socket.id].y]);
+                    console.log(mouseX - 600 + players2[socket.id].x, mouseY - 300 + players2[socket.id].y);
                 }
             }
             // players
@@ -214,6 +220,10 @@ function draw() {
                 textSize(20);
                 text("Extraction: " + Math.round(300 - timeSinceStart/1000) + "s", 200, 50);
                 
+                if (endGameTime != 0){
+                    text("Aliens have won. Game Over.", 600, 300);
+                }
+
                 textSize(12);
             }
         }
@@ -238,6 +248,7 @@ function trackTime(time){
     walls = time[1];
     items = time[2];
     timeSinceStart = time[3];
+    endGameTime = time[4];
 }
 
 function keyPressed(){
