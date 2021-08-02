@@ -20,7 +20,7 @@ function Wall (x, y, length, width){
 function setup() {
     background(128, 128, 128);
     createCanvas(1200, 600);
-    frameRate(80);
+    frameRate(144);
     socket = io.connect('');
 
     socket.on('gameStart',startGame);
