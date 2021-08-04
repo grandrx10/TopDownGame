@@ -738,7 +738,7 @@ function checkForEndGame(){
             players[player].team = "Undecided";
             players[player].power = 100;
             players[player].powerUsage = "Medium";
-            players[player].weaponName = "none";
+            players[player].weaponName = "None";
             players[player].updateGun();
             players[player].health = 100;
             players[player].x = randint(0, mapLength);
