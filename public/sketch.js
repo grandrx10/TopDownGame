@@ -1,6 +1,4 @@
 
-
-
 var socket;
 var xRange;
 var yRange;
@@ -15,6 +13,8 @@ var timeSinceStart = 0;
 var winners;
 var playerCount;
 var survivorCount;
+var generatorCount;
+var currentEvent = "";
 
 
 var walls = []
@@ -71,29 +71,11 @@ function setup() {
 
 function draw() {
     if(userNameSubmitted){
-        for(var i =0; i < entities.length; i++ ){
-            if (entities[i].colour == "blue"){
-                fill(65,105,225);
-            }
-            rect(entities[i].x - xRange, entities[i].y- yRange, entities[i].length, entities[i].width);
-            fill (0);
-            textSize(20);
-            textAlign(CENTER);
-            text(entities[i].name, entities[i].x - xRange + entities[i].length/2, entities[i].y- yRange - 30);
-            textSize(12);
-        }
-
-
         for(var i =0; i < deadBodies.length; i++ ){
             fill(128, 0, 0);
             ellipse(deadBodies[i].x - xRange, deadBodies[i].y- yRange, deadBodies[i].radius, deadBodies[i].radius);
             textSize(12);
             text(deadBodies[i].name, deadBodies[i].x - xRange, deadBodies[i].y - 50- yRange);
-        }
-
-        for (var i = 0; i < bullets.length; i++){
-            fill(255);
-            ellipse(bullets[i].x - xRange, bullets[i].y - yRange, bullets[i].r);
         }
     
         for(var i =0; i < walls.length; i++ ){
@@ -119,6 +101,27 @@ function draw() {
                 fill(32,178,170);
             }
             rect(items[i].x - xRange, items[i].y- yRange, items[i].length, items[i].width);
+        }
+
+        for(var i =0; i < entities.length; i++ ){
+            if (entities[i].colour == "blue"){
+                fill(65,105,225);
+            } else if (entities[i].colour == "green"){
+                fill(50,205,50);
+            } else if (entities[i].colour == "red"){
+                fill(128, 0 ,0);
+            }
+            rect(entities[i].x - xRange, entities[i].y- yRange, entities[i].length, entities[i].width);
+            fill (0);
+            textSize(20);
+            textAlign(CENTER);
+            text(entities[i].name, entities[i].x - xRange + entities[i].length/2, entities[i].y- yRange - 30);
+            textSize(12);
+        }
+
+        for (var i = 0; i < bullets.length; i++){
+            fill(255);
+            ellipse(bullets[i].x - xRange, bullets[i].y - yRange, bullets[i].r);
         }
 
         if(players2 != null){
@@ -149,7 +152,17 @@ function draw() {
                     text(players2[player].username, players2[player].x - xRange, players2[player].y - yRange - 50);
                     textAlign(LEFT);
                     // fill colour of players
-                    fill(173,216,230);
+                    if (players2[player].team == "Rescue Officer"){
+                        fill(0,0,139);
+                    } 
+                    else if (players2[player].team == "Alien"){
+                        fill (0, 100, 0);
+                    } else if (players2[player].team == "Insurgent" && players2[socket.id].team == "Insurgent"){
+                        fill (200, 20, 20)
+                    }
+                    else {
+                        fill(173,216,230);
+                    }
 
                     ellipse(players2[player].x - xRange, players2[player].y - yRange, players2[player].r, players2[player].r);
                     fill(0);
@@ -213,7 +226,14 @@ function draw() {
                 // Fill the player colour
                 if (players2[socket.id].team == "Ghost"){
                     fill(255);
-                } else {
+                } else if (players2[socket.id].team == "Rescue Officer"){
+                    fill(25,25,112);
+                } else if (players2[socket.id].team == "Alien"){
+                    fill(0,128,0);
+                } else if (players2[socket.id].team == "Insurgent"){
+                    fill(200, 20, 20);
+                }
+                else {
                     fill(0,206,209);
                 }
 
@@ -234,7 +254,9 @@ function draw() {
                 if (players2[socket.id].canPickup != "none"){
                     text("Press E to pick up " + players2[socket.id].canPickup, 600, 500);
                 } else if (players2[socket.id].canOpen == true){
-                    text("Press F to open", 600, 520);
+                    text("Press E to open", 600, 500);
+                } else if (players2[socket.id].canUse == true){
+                    text("Press E to use", 600, 500);
                 }
 
                 // INSTRUCTIONS FOR HUMANS AND ALIENS
@@ -253,14 +275,19 @@ function draw() {
                 textSize(15);
                 text("Players Alive: " + playerCount, 200, 70);
                 text("Survivors Alive: " + survivorCount, 200, 90);
+
+                textSize(20);
+                text("Generators: " + generatorCount + "/4", 1000, 70);
                 
 
 
                 textSize(20);
                 if (timeSinceStart < 10*1000){
                     text("Game will start in: " + Math.round(10 - timeSinceStart/1000) + "s", 200, 50);
+                } else if (Math.round(timeSinceStart/1000) < 80){
+                    text("Time Until Event: " + Math.round(100 - timeSinceStart/1000) + "s", 200, 50);
                 } else {
-                    text("Round Time: " + Math.round(timeSinceStart/1000) + "s", 200, 50);
+                    text("Event: " + currentEvent, 200, 50);
                 }
 
                 fill(0);
@@ -299,6 +326,8 @@ function trackTime(time){
     entities = time[6];
     deadBodies = time[7];
     survivorCount = time[8];
+    generatorCount = time[9];
+    currentEvent = time[10];
 }
 
 function keyPressed(){
@@ -309,8 +338,6 @@ function keyPressed(){
             socket.emit('pickup', 1);
         } else if (keyIsDown(67)){ // switch power usage (c)
             socket.emit('switchPower', 1);
-        } else if (keyIsDown(70)){ // open doors (f)
-            socket.emit('openDoor', 1);
         }
     }
 }

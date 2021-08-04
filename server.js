@@ -10,7 +10,8 @@ function Player(username, characterType, x, y, team){
     this.health = 100;
     this.maxHealth = 100;
     this.canPickup = "none";
-    this.canOpen = false;
+    this.canOpen = false; // this is for doors
+    this.canUse = false; // this is for entities (Generators)
     this.power = 100;
     this.lastMovedX = 0;
     this.lastMovedY = 0;
@@ -81,6 +82,28 @@ function Player(username, characterType, x, y, team){
             this.bulletSpeed = 18;
             this.fireRate = 200;
             this.reloadTime = 500;
+            this.xSpeed = 5;
+            this.ySpeed = 5;
+        } else if (this.weaponName == "Shotgun"){
+            this.ammo = 4;
+            this.reserveAmmo = 12;
+            this.clipAmmo = 4;
+            this.damage = 5;
+            this.inaccuracy = 10;
+            this.bulletSpeed = 12;
+            this.fireRate = 800;
+            this.reloadTime = 1000;
+            this.xSpeed = 5;
+            this.ySpeed = 5;
+        } else if (this.weaponName == "Tesla Rifle"){
+            this.ammo = 0;
+            this.reserveAmmo = 0;
+            this.clipAmmo = 0;
+            this.damage = 25;
+            this.inaccuracy = 10;
+            this.bulletSpeed = 20;
+            this.fireRate = 800;
+            this.reloadTime = 0;
             this.xSpeed = 5;
             this.ySpeed = 5;
         } 
@@ -195,7 +218,9 @@ var players = {};
 var playerCount;
 var survivorCount;
 var insurgentCount;
+var generatorCount;
 var winners = "none";
+var eventActivated = false;
 // var walls = [new Wall(200, 200, 100, 100), new Wall(500, 200, 20, 300)];
 var walls = [];
 walls.push(new Wall(-100, -100, 1400, 100));
@@ -281,6 +306,17 @@ var bullets = [];
 var deadBodies = [];
 var socketList = [];
 
+// List of random names:
+var names = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Greenwold", "Hotel", "Indigo", "Janice", "Klen",
+"Lance", "Molly", "Nancy", "Octo", "Prince", "Quintus", "Reaver", "Sally", "Tango", "Vanity", "Underdog", "Wendle", "Xander",
+"Youth", "Zebra", "Arman", "Beta", "Ceter", "Dovomov", "Eliot", "Fang", "Gaul", "Haven", "Io", "Jello", "Karen", "Larry",
+"Maven", "North Star", "Ool", "Patterson", "Queen", "Realter", "Sanguine", "Tommy", "Vindy", "Ursula", "Wehrmacht", "X-Ray", "Youngstan",
+"Zai"];
+
+var randomEvents = ["Rescue Operation", "Aliens", "Rescue Operation"];
+var possibleWeapons = ["Pistol", "Rifle", "Pistol", "Rifle", "Pistol", "Sniper", "Minigun", "Pistol", "Rifle", "Shotgun", "Shotgun", "Shotgun",
+"Shotgun", "Tesla Rifle"];
+
 var startSetup = false;
 var d = new Date();
 var gameTime = d.getTime();
@@ -288,6 +324,7 @@ var startTime = d.getTime();
 var endGameTime = 0;
 var start = false; // note
 var timeSinceStart = 0;
+var event;
 
 //map dimensions
 var mapLength = 3800;
@@ -318,7 +355,8 @@ setInterval(function () {
     killPlayers();
     io.sockets.emit('update', players);
     io.sockets.emit('bulletUpdate', bullets);
-    io.sockets.emit('updateTime', [gameTime, walls, items, timeSinceStart, winners, playerCount, entities, deadBodies, survivorCount]);
+    io.sockets.emit('updateTime', [gameTime, walls, items, timeSinceStart, winners, playerCount, entities, deadBodies, 
+        survivorCount, generatorCount, event]);
     for (bullet of bullets){
         bullet.updateBulletLocation();
     }
@@ -326,10 +364,12 @@ setInterval(function () {
     reloadCheck();
     pickupCheck();
     canOpenCheck();
+    canUseCheck();
     spawnItems();
     updatePower();
     doorUpdate();
     checkForSurvivors();
+    checkForGenerators();
     checkForEndGame();
     assignRoles();
     getSocketList();
@@ -397,7 +437,25 @@ function newConnection(socket){
                         }
                     }
                 }
-            } else{
+            }
+            else if (players[socket.id].weaponName == "Shotgun") {
+                if (gameTime - players[socket.id].timeLastShot > players[socket.id].fireRate && players[socket.id].ammo > 0 && players[socket.id].isReloading == false){
+                    for (var i = 0; i < 10; i ++){
+                        bullets.push(new Bullet(players[socket.id].x, players[socket.id].y, pos[0] + randint(-50, 80), pos[1]+ randint(-50, 80), socket.id, players[socket.id].bulletSpeed, players[socket.id].damage));
+                    }
+                    players[socket.id].timeLastShot = gameTime;
+                    players[socket.id].ammo -= 1;
+                }
+            } else if (players[socket.id].weaponName == "Tesla Rifle") {
+                if (gameTime - players[socket.id].timeLastShot > players[socket.id].fireRate && players[socket.id].power > 0 && players[socket.id].isReloading == false){
+                    for (var i = 0; i < 3; i ++){
+                        bullets.push(new Bullet(players[socket.id].x, players[socket.id].y, pos[0], pos[1], socket.id, players[socket.id].bulletSpeed + i, players[socket.id].damage));
+                    }
+                    players[socket.id].timeLastShot = gameTime;
+                    players[socket.id].power -= 7;
+                }
+            }
+            else{
                 if (gameTime - players[socket.id].timeLastShot > players[socket.id].fireRate && players[socket.id].ammo > 0 && players[socket.id].isReloading == false){
                     bullets.push(new Bullet(players[socket.id].x, players[socket.id].y, pos[0], pos[1], socket.id, players[socket.id].bulletSpeed, players[socket.id].damage));
                     players[socket.id].timeLastShot = gameTime;
@@ -424,17 +482,18 @@ function newConnection(socket){
                         items.splice(findClosest(players[socket.id], items), 1);
                     }
                 }
+            } else if (players[socket.id].canOpen && walls[findClosest(players[socket.id], walls)].type == "door") {
+                openDoor(findClosest(players[socket.id], walls));
+            } else if (players[socket.id].canUse && entities[findClosest(players[socket.id], entities)].name == "Generator") {
+                if (entities[findClosest(players[socket.id], entities)].colour == "red"){
+                    entities[findClosest(players[socket.id], entities)].colour = "green";
+                } else {
+                    entities[findClosest(players[socket.id], entities)].colour = "red";
+                }
             }
         }
     })
 
-    socket.on('openDoor', function(){
-        if (players[socket.id] != undefined){
-            if (players[socket.id].canOpen && walls[findClosest(players[socket.id], walls)].type == "door") {
-                openDoor(findClosest(players[socket.id], walls));
-            }
-        }
-    })
 
     socket.on('switchPower', function(){
         if (players[socket.id] != undefined){
@@ -453,13 +512,13 @@ function newConnection(socket){
     function processUsername(usernameList) { //[username, class]
         if (timeSinceStart< 20 * 1000) { // 10 seconds before game starts
             if(usernameList[0] == ""){
-                var player = new Player("Unnamed", usernameList[1], randint(0, mapLength), randint(0, mapWidth), "Undecided");
+                var player = new Player(names[randint(0, names.length-1)], usernameList[1], randint(0, mapLength), randint(0, mapWidth), "Undecided");
             } else {
                 var player = new Player(usernameList[0], usernameList[1], randint(0, mapLength), randint(0, mapWidth), "Undecided");
             }
         } else { // DUDE CHANGE THIS BACK!
             if(usernameList[0] == ""){
-                var player = new Player("Unnamed", "Ghost", randint(0, mapLength), randint(0, mapWidth), "Ghost");
+                var player = new Player(names[randint(0, names.length-1)], "Ghost", randint(0, mapLength), randint(0, mapWidth), "Ghost");
             } else {
                 var player = new Player(usernameList[0], "Ghost", randint(0, mapLength), randint(0, mapWidth), "Ghost");
             } 
@@ -585,6 +644,20 @@ function canOpenCheck(){
     }
 }
 
+function canUseCheck(){
+    // can use check
+    for (player in players){
+        players[player].canUse = false;
+    }
+    for (var c = 0; c < entities.length; c++){
+        for (player in players){
+            if (rectCircDetect(entities[c], players[player]) && entities[c].name == "Generator" && players[player].team != "Ghost"){
+                players[player].canUse = true;
+            }
+        }
+    }
+}
+
 function findClosest(location, list){
     var closest = -1;
     var closestDistance = 10000000;
@@ -625,7 +698,7 @@ function killPlayers(){
                 deadBodies.push(new DeadBody(players[player].x, players[player].y, players[player].r, players[player].username));
             }
             players[player].team = "Ghost";
-            players[player].weaponName = "none";
+            players[player].weaponName = "None";
             players[player].powerUsage = "none";
             players[player].updateGun();
         } else if (players[player].health > 100){
@@ -635,11 +708,11 @@ function killPlayers(){
 }
 
 function spawnItems(){
-    if (Math.round(gameTime - startTime) % 2000 == 0 && items.length < 8 && startSetup == true){
-        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Sniper", "weapon"));
-        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Rifle", "weapon"));
-        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Rifle", "weapon"));
-        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Minigun", "weapon"));
+    if (Math.round((gameTime - startTime)/1000) % 5 == 0 && items.length < 15 && startSetup == true){
+        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length)], "weapon"));
+        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length)], "weapon"));
+        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length)], "weapon"));
+        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length)], "weapon"));
         createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 20, 20, "Battery", "utility"));
         createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 20, 20, "Battery", "utility"));
         createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 30, 30, "Health Pack", "utility"));
@@ -659,6 +732,23 @@ function createItem(item){
         if (collision){
             items[items.length-1].x = randint(0, mapLength);
             items[items.length-1].y = randint(0, mapWidth);
+        }
+    }
+}
+
+function createEntity(entity){
+    entities.push(entity);
+    var collision = true;
+    while (collision == true){
+        collision = false;
+        for (i = 0; i < walls.length; i ++){
+            if (rectRectDetect(walls[i], entities[entities.length -1])){
+                collision = true;
+            }
+        }
+        if (collision){
+            entities[entities.length-1].x = randint(0, mapLength);
+            entities[entities.length-1].y = randint(0, mapWidth);
         }
     }
 }
@@ -692,6 +782,29 @@ function openDoor(i){
         walls[i].ySpeed = 1;
     }
     walls[i].openedTime = gameTime;
+}
+
+function checkForGenerators(){
+    generatorCount = 0;
+    for (i = 0; i < entities.length; i++){
+        if (entities[i].name == "Generator" && entities[i].colour == "green"){
+            generatorCount ++;
+        }
+    }
+
+    if (generatorCount == 4){
+        for (player in players){
+            if (players[player].team == "Survivor"){
+                players[player].power = 100;
+            }
+        }
+    } else if (generatorCount == 0){
+        for (player in players){
+            if (players[player].team == "Survivor"){
+                players[player].power = 0;
+            }
+        }
+    }
 }
 
 function checkForSurvivors(){
@@ -749,7 +862,10 @@ function checkForEndGame(){
         gameTime = d.getTime();
         startTime = d.getTime();
         endGameTime = 0;
+        timeSinceStart = 0;
         items = [];
+        entities = [new Entity (1350, -350, 200, 200, "RESPAWN STATION", "blue")];
+        eventActivated = false;
         deadBodies = [];
         startSetup = false;
         winners = "none";
@@ -759,14 +875,57 @@ function checkForEndGame(){
 function assignRoles (){
     if (timeSinceStart > 10* 1000 && playerCount >= 3 && startSetup == false){
         startSetup = true;
+        var random;
         for (player in players){
             players[player].team = "Survivor";
         }
+        if (playerCount < 5){
+            random = socketList[randint(0, socketList.length - 1)];
+            players[random].team = "Insurgent";
+        } else {
+            random = socketList[randint(0, socketList.length - 1)];
+            players[random].team = "Insurgent";
+            random = socketList[randint(0, socketList.length - 1)];
+            while (players[random].team == "Insurgent"){
+                random = socketList[randint(0, socketList.length - 1)];
+            }
+            players[random].team = "Insurgent";  
+        }
 
-        players[socketList[randint(0, socketList.length - 1)]].team = "Insurgent";
 
         spawnStartItems();
-
+    } else if (timeSinceStart > 80*1000 && eventActivated == false){
+        eventActivated = true;
+        event = randomEvents[0, randomEvents.length-1];
+        if (event == "Rescue Operation"){
+            for (player in players){
+                if (players[player].team == "Ghost"){
+                    players[player].team = "Rescue Officer";
+                    players[player].weaponName = "Rifle";
+                    players[player].health = 100;
+                    players[player].power = 100;
+                    players[player].powerUsage = "Medium";
+                    players[player].updateGun();
+                    players[player].x = 1350 + randint(0, 200);
+                    players[player].y = -350 + randint(0, 200);
+                    //1350, -350, 200, 200
+                }
+            }
+        } else if (event == "Aliens"){
+            for (player in players){
+                if (players[player].team == "Ghost"){
+                    players[player].team = "Alien";
+                    players[player].weaponName = "Melee";
+                    players[player].powerUsage = "N/A";
+                    players[player].power = 100;
+                    players[player].health = 100;
+                    players[player].updateGun();
+                    players[player].x = 1350 + randint(0, 200);
+                    players[player].y = -350 + randint(0, 200);
+                    //1350, -350, 200, 200
+                }
+            }
+        }
     }
 }
 
@@ -803,12 +962,17 @@ function doorUpdate(){
 }
 
 function spawnStartItems(){
-    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Rifle", "weapon"));
-    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Pistol", "weapon"));
-    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Pistol", "weapon"));
+    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length)], "weapon"));
+    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length)], "weapon"));
+    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length)], "weapon"));
     createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 20, 20, "Battery", "utility"))
     createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 20, 20, "Battery", "utility"));
     createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 30, 30, "Health Pack", "utility"));
+
+    createEntity(new Entity (randint(0, mapLength), randint(0, mapWidth), 100, 100, "Generator", "green"));
+    createEntity(new Entity (randint(0, mapLength), randint(0, mapWidth), 100, 100, "Generator", "green"));
+    createEntity(new Entity (randint(0, mapLength), randint(0, mapWidth), 100, 100, "Generator", "red"));
+    createEntity(new Entity (randint(0, mapLength), randint(0, mapWidth), 100, 100, "Generator", "red"));
 }
 
 function getSocketList(){
