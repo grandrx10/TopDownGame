@@ -750,6 +750,7 @@ function checkForEndGame(){
         startTime = d.getTime();
         endGameTime = 0;
         items = [];
+        deadBodies = [];
         startSetup = false;
         winners = "none";
     }
