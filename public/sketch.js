@@ -1,13 +1,21 @@
+
+
+
 var socket;
 var xRange;
 var yRange;
 var bullets = [];
 var items = [];
+var entities = [];
+var deadBodies = [];
 var players2;
 var userNameSubmitted = false;
 var gameTime;
 var timeSinceStart = 0;
-var endGameTime;
+var winners;
+var playerCount;
+var survivorCount;
+
 
 var walls = []
 
@@ -63,6 +71,26 @@ function setup() {
 
 function draw() {
     if(userNameSubmitted){
+        for(var i =0; i < entities.length; i++ ){
+            if (entities[i].colour == "blue"){
+                fill(65,105,225);
+            }
+            rect(entities[i].x - xRange, entities[i].y- yRange, entities[i].length, entities[i].width);
+            fill (0);
+            textSize(20);
+            textAlign(CENTER);
+            text(entities[i].name, entities[i].x - xRange + entities[i].length/2, entities[i].y- yRange - 30);
+            textSize(12);
+        }
+
+
+        for(var i =0; i < deadBodies.length; i++ ){
+            fill(128, 0, 0);
+            ellipse(deadBodies[i].x - xRange, deadBodies[i].y- yRange, deadBodies[i].radius, deadBodies[i].radius);
+            textSize(12);
+            text(deadBodies[i].name, deadBodies[i].x - xRange, deadBodies[i].y - 50- yRange);
+        }
+
         for (var i = 0; i < bullets.length; i++){
             fill(255);
             ellipse(bullets[i].x - xRange, bullets[i].y - yRange, bullets[i].r);
@@ -76,6 +104,13 @@ function draw() {
             }
             rect(walls[i].x - xRange, walls[i].y- yRange, walls[i].length, walls[i].width);
         }
+
+        // fill(0);
+        // rect(-500, -500, 5000, 400);
+        // rect(-500, -500, 400, 500);
+        // rect(-500, 2400, 5000, 400);
+        // rect(3900, -500, 400, 5000);
+        
 
         for(var i =0; i < items.length; i++ ){
             if (items[i].type == "weapon"){
@@ -108,16 +143,14 @@ function draw() {
             }
             // players
             for (let player in players2){
-                if (player != socket.id){
+                if (player != socket.id && players2[player].team != "Ghost"){
                     fill(0);
                     textAlign(CENTER);
                     text(players2[player].username, players2[player].x - xRange, players2[player].y - yRange - 50);
                     textAlign(LEFT);
-                    if (players2[player].team == "human"){
-                        fill(173,216,230);
-                    } else {
-                        fill(152,251,152);
-                    }
+                    // fill colour of players
+                    fill(173,216,230);
+
                     ellipse(players2[player].x - xRange, players2[player].y - yRange, players2[player].r, players2[player].r);
                     fill(0);
                     rect(players2[player].x - xRange - 25, players2[player].y - yRange - 40, 50, 10);
@@ -177,11 +210,13 @@ function draw() {
                 textSize(12);
                 text(players2[socket.id].username, width/2, height/2 - 50);
                 textAlign(LEFT);
-                if (players2[socket.id].team == "human"){
-                    fill(0,206,209);
+                // Fill the player colour
+                if (players2[socket.id].team == "Ghost"){
+                    fill(255);
                 } else {
-                    fill(0,128,0);
+                    fill(0,206,209);
                 }
+
                 ellipse(width/2, height/2, 50, 50);
                 fill(0);
                 rect(players2[socket.id].x - xRange - 25, players2[socket.id].y - yRange - 40, 50, 10);
@@ -196,7 +231,7 @@ function draw() {
                 textSize(20);
                 text(players2[socket.id].ammo+ "/" + players2[socket.id].reserveAmmo, 1000, 500);
 
-                if (players2[socket.id].canPickup != "none" && players2[socket.id].team != "alien"){
+                if (players2[socket.id].canPickup != "none"){
                     text("Press E to pick up " + players2[socket.id].canPickup, 600, 500);
                 } else if (players2[socket.id].canOpen == true){
                     text("Press F to open", 600, 520);
@@ -206,22 +241,33 @@ function draw() {
                 fill(255);
                 textAlign(CENTER);
                 textSize(20);
-                if (players2[socket.id].team == "human"){
-                    text("You are Human", 600, 30);
-                    textSize(15);
-                    text("Survive until extraction", 600, 50);
-                } else if (players2[socket.id].team == "alien"){
-                    fill(128, 0, 0);
-                    text("You are Alien", 600, 30);
-                    textSize(15);
-                    text("Hunt the Humans", 600, 50);
+                text("Team: " + players2[socket.id].team, 600, 30);
+                textSize(15);
+                if (players2[socket.id].team == "Undecided"){
+                    text("Awaiting more players", 600, 50);
+                } else if (players2[socket.id].team == "Survivor"){
+                    text("Survive", 600, 50);
+                } else if (players2[socket.id].team == "Insurgent"){
+                    text("Kill all survivors", 600, 50);
                 }
+                textSize(15);
+                text("Players Alive: " + playerCount, 200, 70);
+                text("Survivors Alive: " + survivorCount, 200, 90);
+                
+
 
                 textSize(20);
-                text("Extraction: " + Math.round(300 - timeSinceStart/1000) + "s", 200, 50);
-                
-                if (endGameTime != 0){
-                    text("Aliens have won. Game Over.", 600, 300);
+                if (timeSinceStart < 10*1000){
+                    text("Game will start in: " + Math.round(10 - timeSinceStart/1000) + "s", 200, 50);
+                } else {
+                    text("Round Time: " + Math.round(timeSinceStart/1000) + "s", 200, 50);
+                }
+
+                fill(0);
+                if (winners == "Survivors"){
+                    text("Game Over. Survivors Win", 600, 300);
+                } else if (winners == "Insurgents"){
+                    text("Game Over. Insurgents Win", 600, 300);
                 }
 
                 textSize(12);
@@ -248,7 +294,11 @@ function trackTime(time){
     walls = time[1];
     items = time[2];
     timeSinceStart = time[3];
-    endGameTime = time[4];
+    winners = time[4];
+    playerCount = time[5];
+    entities = time[6];
+    deadBodies = time[7];
+    survivorCount = time[8];
 }
 
 function keyPressed(){

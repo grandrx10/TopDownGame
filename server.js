@@ -154,6 +154,22 @@ function Item (x, y, length, width, name, type){
     this.type = type;
 }
 
+function Entity (x, y, length, width, name, colour){
+    this.x =x;
+    this.y = y;
+    this.length = length;
+    this.width = width;
+    this.colour = colour;
+    this.name = name;
+}
+
+function DeadBody (x, y, radius, name){
+    this.x = x;
+    this.y = y;
+    this.radius = radius;
+    this.name = name;
+}
+
 function Bullet(x, y, aimX, aimY, shooter, speed, damage) {
     this.x = x;
     this.y = y;
@@ -176,9 +192,20 @@ function Bullet(x, y, aimX, aimY, shooter, speed, damage) {
 }
 
 var players = {};
+var playerCount;
+var survivorCount;
+var insurgentCount;
+var winners = "none";
 // var walls = [new Wall(200, 200, 100, 100), new Wall(500, 200, 20, 300)];
 var walls = [];
-walls.push(new Wall(-100, -100, 10000, 100));
+walls.push(new Wall(-100, -100, 1400, 100));
+walls.push(new Wall(1600, -100, 10000, 100));
+
+walls.push(new Wall(1000, -500, 800, 100));
+walls.push(new Wall(1800, -500, 100, 400));
+walls.push(new Wall(1000, -500, 100, 400));
+
+
 walls.push(new Wall(-100, -100, 100, 10000));
 walls.push(new Wall(1000, 0, 100, 500));
 walls.push(new Wall(1000, 700, 100, 1200));
@@ -249,11 +276,12 @@ walls.push(new Wall(3425, 1300, 50, 150, "door"));
 
 
 var items = [];
-spawnStartItems();
-// x 1800 y 2300
-
+var entities = [new Entity (1350, -350, 200, 200, "RESPAWN STATION", "blue")];
 var bullets = [];
+var deadBodies = [];
+var socketList = [];
 
+var startSetup = false;
 var d = new Date();
 var gameTime = d.getTime();
 var startTime = d.getTime();
@@ -290,7 +318,7 @@ setInterval(function () {
     killPlayers();
     io.sockets.emit('update', players);
     io.sockets.emit('bulletUpdate', bullets);
-    io.sockets.emit('updateTime', [gameTime, walls, items, timeSinceStart, endGameTime]);
+    io.sockets.emit('updateTime', [gameTime, walls, items, timeSinceStart, winners, playerCount, entities, deadBodies, survivorCount]);
     for (bullet of bullets){
         bullet.updateBulletLocation();
     }
@@ -301,8 +329,10 @@ setInterval(function () {
     spawnItems();
     updatePower();
     doorUpdate();
-    checkForHumanSurvivors();
+    checkForSurvivors();
     checkForEndGame();
+    assignRoles();
+    getSocketList();
 }, 10);
 
 setInterval(function () {
@@ -423,15 +453,15 @@ function newConnection(socket){
     function processUsername(usernameList) { //[username, class]
         if (timeSinceStart< 20 * 1000) { // 10 seconds before game starts
             if(usernameList[0] == ""){
-                var player = new Player("Unnamed", usernameList[1], randint(0, mapLength), randint(0, mapWidth), "human");
+                var player = new Player("Unnamed", usernameList[1], randint(0, mapLength), randint(0, mapWidth), "Undecided");
             } else {
-                var player = new Player(usernameList[0], usernameList[1], randint(0, mapLength), randint(0, mapWidth), "human");
+                var player = new Player(usernameList[0], usernameList[1], randint(0, mapLength), randint(0, mapWidth), "Undecided");
             }
         } else { // DUDE CHANGE THIS BACK!
             if(usernameList[0] == ""){
-                var player = new Player("Unnamed", "alien", randint(0, mapLength), randint(0, mapWidth), "alien");
+                var player = new Player("Unnamed", "Ghost", randint(0, mapLength), randint(0, mapWidth), "Ghost");
             } else {
-                var player = new Player(usernameList[0], "alien", randint(0, mapLength), randint(0, mapWidth), "alien");
+                var player = new Player(usernameList[0], "Ghost", randint(0, mapLength), randint(0, mapWidth), "Ghost");
             } 
         }
         players[socket.id] = player;
@@ -444,7 +474,11 @@ function newConnection(socket){
 }
 
 function checkCollision(player, walls, dir){
-    // problem here!!!!
+    if (player.team == "Ghost"){
+        return true;
+    }
+
+    // predict in future
     if (dir == "left"){
         nextPositionX = player.x - player.xSpeed - 25;
         nextPositionY = player.y;
@@ -512,7 +546,7 @@ function checkBulletCollision (){
 
     for (player in players){
         for (var i = bullets.length - 1; i >= 0; i --){
-            if (distance(players[player].x, players[player].y, bullets[i].x, bullets[i].y) < bullets[i].r/2 + players[player].r/2 && bullets[i].shooter != player && players[player].team != players[bullets[i].shooter].team){ // 
+            if (distance(players[player].x, players[player].y, bullets[i].x, bullets[i].y) < bullets[i].r/2 + players[player].r/2 && bullets[i].shooter != player && players[player].team != "Ghost"){ //players[player].team != players[bullets[i].shooter].team 
                 players[player].health -= bullets[i].damage;
                 bullets.splice(i, 1);
             }
@@ -522,17 +556,17 @@ function checkBulletCollision (){
 
 function pickupCheck(){
     for (player in players){
-            players[player].canPickup = "none";
+        players[player].canPickup = "none";
     }
     for (var c = 0; c < items.length; c++){
         for (player in players){
-            if (rectCircDetect(items[c], players[player])){
+            if (rectCircDetect(items[c], players[player]) && players[player].team != "Ghost"){
                 players[player].canPickup = items[c].name;
             }
+            if (items.length == 0){
+                players[player].canPickup = "none";
+            }
         }
-    }
-    if (items.length == 0){
-        players[player].canPickup = "none";
     }
 }
 
@@ -543,7 +577,7 @@ function canOpenCheck(){
     for (var c = 0; c < walls.length; c++){
         for (player in players){
             players[player].r = 100;
-            if (rectCircDetect(walls[c], players[player]) && walls[c].type == "door"){
+            if (rectCircDetect(walls[c], players[player]) && walls[c].type == "door" && players[player].team != "Ghost"){
                 players[player].canOpen = true;
             }
             players[player].r = 50;
@@ -587,7 +621,13 @@ function killPlayers(){
                     bullets.splice(i, 1);
                 }
             }
-            delete players[player];
+            if (players[player].team != "Ghost"){
+                deadBodies.push(new DeadBody(players[player].x, players[player].y, players[player].r, players[player].username));
+            }
+            players[player].team = "Ghost";
+            players[player].weaponName = "none";
+            players[player].powerUsage = "none";
+            players[player].updateGun();
         } else if (players[player].health > 100){
             players[player].health = 100;
         }
@@ -595,7 +635,7 @@ function killPlayers(){
 }
 
 function spawnItems(){
-    if (Math.round(gameTime - startTime) % 2000 == 0 && items.length < 8){
+    if (Math.round(gameTime - startTime) % 2000 == 0 && items.length < 8 && startSetup == true){
         createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Sniper", "weapon"));
         createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Rifle", "weapon"));
         createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, "Rifle", "weapon"));
@@ -625,20 +665,22 @@ function createItem(item){
 
 
 function updatePower(){
-    for (player in players){
-        if (players[player].powerUsage == "Low"){
-            players[player].power -= 0.005;
-        } else if (players[player].powerUsage == "Medium"){
-            players[player].power -= 0.01;
-        } else if (players[player].powerUsage == "High"){
-            players[player].power -= 0.02;
-        }
-        
-        if (players[player].power < 0){
-            players[player].powerUsage = "Off";
-            players[player].power = 0;
-        } else if (players[player].power > 100){
-            players[player].power = 100;
+    if (startSetup == true){
+        for (player in players){
+            if (players[player].powerUsage == "Low"){
+                players[player].power -= 0.005;
+            } else if (players[player].powerUsage == "Medium"){
+                players[player].power -= 0.01;
+            } else if (players[player].powerUsage == "High"){
+                players[player].power -= 0.02;
+            }
+            
+            if (players[player].power < 0){
+                players[player].powerUsage = "Off";
+                players[player].power = 0;
+            } else if (players[player].power > 100){
+                players[player].power = 100;
+            }
         }
     }
 }
@@ -652,29 +694,78 @@ function openDoor(i){
     walls[i].openedTime = gameTime;
 }
 
-function checkForHumanSurvivors(){
-    var surviving = false;
-    if (timeSinceStart > 20 * 1000){
-        for(player in players){
-            if (players[player].team == "human"){
-                surviving = true;
-            }
+function checkForSurvivors(){
+    playerCount = 0;
+    survivorCount = 0;
+    insurgentCount = 0;
+
+    for (player in players){
+        if (players[player].team != "Ghost"){
+            playerCount ++;
         }
-        if (surviving == false && endGameTime == 0){
+
+        if (players[player].team == "Survivor"){
+            survivorCount ++;
+        }
+
+        if (players[player].team == "Insurgent"){
+            insurgentCount ++;
+        }
+    }
+
+
+    if (timeSinceStart > 15*1000){
+        if (survivorCount == 0 && endGameTime == 0){
             endGameTime = gameTime;
-        } 
+            winners = "Insurgents";
+        } else if (insurgentCount == 0 && endGameTime == 0){
+            endGameTime = gameTime;
+            winners = "Survivors";
+        }
+    }
+
+    if (playerCount < 3 && startSetup == false){
+        d = new Date();
+        gameTime = d.getTime();
+        startTime = d.getTime();
+        endGameTime = 0;
     }
 }
 
 function checkForEndGame(){
     if (gameTime - endGameTime > 10*1000 && endGameTime != 0){
-        players = {};
+        for (player in players){
+            players[player].team = "Undecided";
+            players[player].power = 100;
+            players[player].powerUsage = "Medium";
+            players[player].weaponName = "none";
+            players[player].updateGun();
+            players[player].health = 100;
+            players[player].x = randint(0, mapLength);
+            players[player].y = randint(0, mapWidth);
+            players[player].checkLocation();
+        }
         d = new Date();
         gameTime = d.getTime();
         startTime = d.getTime();
         endGameTime = 0;
         items = [];
+        startSetup = false;
+        winners = "none";
+    }
+}
+
+function assignRoles (){
+    if (timeSinceStart > 10* 1000 && playerCount >= 3 && startSetup == false){
+        startSetup = true;
+        for (player in players){
+            players[player].team = "Survivor";
+        }
+
+        players[socketList[randint(0, socketList.length - 1)]].team = "Insurgent";
+
         spawnStartItems();
+
     }
 }
 
@@ -703,7 +794,7 @@ function doorUpdate(){
                     players[player].y = walls[i].y - players[player].r/2;
                 }
             }
-            if (rectCircDetect(walls[i], players[player])){
+            if (rectCircDetect(walls[i], players[player]) && players[player].team != "Ghost"){
                 players[player].health -= 5;
             }
         }
@@ -717,4 +808,11 @@ function spawnStartItems(){
     createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 20, 20, "Battery", "utility"))
     createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 20, 20, "Battery", "utility"));
     createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 30, 30, "Health Pack", "utility"));
+}
+
+function getSocketList(){
+    socketList = [];
+    for (player in players){
+        socketList.push(player);
+    }
 }
