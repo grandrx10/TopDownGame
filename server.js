@@ -455,14 +455,6 @@ function newConnection(socket){
                     for (player in players){
                         if (player != socket.id && distance(players[player].x, players[player].y, players[socket.id].x, players[socket.id].y) < 120 && players[player].team != "Alien"){
                             players[player].health -= players[socket.id].damage;
-                            if (players[player].health <= 0){
-                                players[player].team = "Alien";
-                                players[player].weaponName = "Melee";
-                                players[player].powerUsage = "N/A";
-                                players[player].power = 100;
-                                players[player].health = 100;
-                                players[player].updateGun();
-                            }
                         }
 
                     }
@@ -549,7 +541,7 @@ function newConnection(socket){
     })
 
     function processUsername(usernameList) { //[username, class]
-        if (timeSinceStart< 20 * 1000) { // 10 seconds before game starts
+        if (timeSinceStart< 10 * 1000) { // 10 seconds before game starts
             if(usernameList[0] == ""){
                 var player = new Player(names[randint(0, names.length-1)], usernameList[1], randint(0, mapLength), randint(0, mapWidth), "Undecided");
             } else {
@@ -762,10 +754,10 @@ function killPlayers(){
 
 function spawnItems(){
     if (Math.round((gameTime - startTime)/1000) % 5 == 0 && items.length < 15 && startSetup == true){
-        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length)], "weapon"));
-        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length)], "weapon"));
-        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length)], "weapon"));
-        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length)], "weapon"));
+        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length-1)], "weapon"));
+        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length-1)], "weapon"));
+        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length-1)], "weapon"));
+        createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length-1)], "weapon"));
         createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 20, 20, "Battery", "utility"));
         createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 20, 20, "Battery", "utility"));
         createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 30, 30, "Health Pack", "utility"));
@@ -1041,9 +1033,9 @@ function doorUpdate(){
 }
 
 function spawnStartItems(){
-    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length)], "weapon"));
-    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length)], "weapon"));
-    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length)], "weapon"));
+    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length-1)], "weapon"));
+    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length-1)], "weapon"));
+    createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 40, 20, possibleWeapons[randint(0, possibleWeapons.length-1)], "weapon"));
     createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 20, 20, "Battery", "utility"))
     createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 20, 20, "Battery", "utility"));
     createItem(new Item(randint(0, mapLength), randint(0, mapWidth), 30, 30, "Health Pack", "utility"));

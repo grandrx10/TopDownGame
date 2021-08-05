@@ -150,7 +150,7 @@ function draw() {
                 if (player != socket.id && players2[player].team != "Ghost"){
                     fill(0);
                     textAlign(CENTER);
-                    text(players2[player].username, players2[player].x - xRange, players2[player].y - yRange - 50);
+                    //text(players2[player].username, players2[player].x - xRange, players2[player].y - yRange - 50);
                     textAlign(LEFT);
                     // fill colour of players
                     if (players2[player].team == "Rescue Officer"){
@@ -224,7 +224,7 @@ function draw() {
                 fill(0);
                 textAlign(CENTER);
                 textSize(12);
-                text(players2[socket.id].username, width/2, height/2 - 50);
+                //text(players2[socket.id].username, width/2, height/2 - 50);
                 textAlign(LEFT);
                 // Fill the player colour
                 if (players2[socket.id].team == "Ghost"){
