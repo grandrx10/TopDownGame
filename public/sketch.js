@@ -71,12 +71,6 @@ function setup() {
 
 function draw() {
     if(userNameSubmitted){
-        for(var i =0; i < deadBodies.length; i++ ){
-            fill(128, 0, 0);
-            ellipse(deadBodies[i].x - xRange, deadBodies[i].y- yRange, deadBodies[i].radius, deadBodies[i].radius);
-            textSize(12);
-            text(deadBodies[i].name, deadBodies[i].x - xRange, deadBodies[i].y - 50- yRange);
-        }
     
         for(var i =0; i < walls.length; i++ ){
             if (walls[i].type == "door"){
@@ -119,6 +113,13 @@ function draw() {
             textSize(12);
         }
 
+        for(var i =0; i < deadBodies.length; i++ ){
+            fill(128, 0, 0);
+            ellipse(deadBodies[i].x - xRange, deadBodies[i].y- yRange, deadBodies[i].radius, deadBodies[i].radius);
+            textSize(12);
+            text(deadBodies[i].name, deadBodies[i].x - xRange, deadBodies[i].y - 50- yRange);
+        }
+
         for (var i = 0; i < bullets.length; i++){
             fill(255);
             ellipse(bullets[i].x - xRange, bullets[i].y - yRange, bullets[i].r);
@@ -157,8 +158,10 @@ function draw() {
                     } 
                     else if (players2[player].team == "Alien"){
                         fill (0, 100, 0);
-                    } else if (players2[player].team == "Insurgent" && players2[socket.id].team == "Insurgent"){
+                    } else if (players2[player].team == "Insurgent" && (players2[socket.id].team == "Insurgent" || players2[socket.id].team == "Insurgent Officer")){
                         fill (200, 20, 20)
+                    } else if (players2[player].team == "Insurgent Officer"){
+                        fill (250, 20, 20)
                     }
                     else {
                         fill(173,216,230);
@@ -230,7 +233,7 @@ function draw() {
                     fill(25,25,112);
                 } else if (players2[socket.id].team == "Alien"){
                     fill(0,128,0);
-                } else if (players2[socket.id].team == "Insurgent"){
+                } else if (players2[socket.id].team == "Insurgent" ||players2[socket.id].team == "Insurgent Officer"){
                     fill(200, 20, 20);
                 }
                 else {
@@ -270,7 +273,13 @@ function draw() {
                 } else if (players2[socket.id].team == "Survivor"){
                     text("Survive", 600, 50);
                 } else if (players2[socket.id].team == "Insurgent"){
-                    text("Kill all survivors", 600, 50);
+                    text("Kill all Survivors", 600, 50);
+                } else if (players2[socket.id].team == "Insurgent Officer"){
+                    text("Kill all Survivors", 600, 50);
+                } else if (players2[socket.id].team == "Rescue Officer"){
+                    text("Kill all Insurgents", 600, 50);
+                } else if (players2[socket.id].team == "Alien"){
+                    text("Convert all Humans", 600, 50);
                 }
                 textSize(15);
                 text("Players Alive: " + playerCount, 200, 70);
@@ -282,13 +291,13 @@ function draw() {
 
 
                 textSize(20);
-                if (timeSinceStart < 10*1000){
+                if (timeSinceStart < 10*1000 && currentEvent == "No Event"){
                     text("Game will start in: " + Math.round(10 - timeSinceStart/1000) + "s", 200, 50);
                 } else if (Math.round(timeSinceStart/1000) < 80){
-                    text("Time Until Event: " + Math.round(100 - timeSinceStart/1000) + "s", 200, 50);
-                } else {
-                    text("Event: " + currentEvent, 200, 50);
+                    text("Time Until Event: " + Math.round(60 - timeSinceStart/1000) + "s", 200, 50);
                 }
+                
+                text("Event: " + currentEvent, 200, 25);
 
                 fill(0);
                 if (winners == "Survivors"){
@@ -334,7 +343,7 @@ function keyPressed(){
     if (userNameSubmitted){
         if (keyIsDown(82)){ // reload (r)
             socket.emit('reload', 1);
-        } else if (keyIsDown(69) && players2[socket.id].team != "alien"){ // pickup (e)
+        } else if (keyIsDown(69)){ // pickup (e)
             socket.emit('pickup', 1);
         } else if (keyIsDown(67)){ // switch power usage (c)
             socket.emit('switchPower', 1);

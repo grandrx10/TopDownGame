@@ -78,7 +78,7 @@ function Player(username, characterType, x, y, team){
             this.reserveAmmo = 24;
             this.clipAmmo = 8;
             this.damage = 25;
-            this.inaccuracy = 10;
+            this.inaccuracy = 15;
             this.bulletSpeed = 18;
             this.fireRate = 200;
             this.reloadTime = 500;
@@ -88,8 +88,8 @@ function Player(username, characterType, x, y, team){
             this.ammo = 4;
             this.reserveAmmo = 12;
             this.clipAmmo = 4;
-            this.damage = 5;
-            this.inaccuracy = 10;
+            this.damage = 8;
+            this.inaccuracy = 50;
             this.bulletSpeed = 12;
             this.fireRate = 800;
             this.reloadTime = 1000;
@@ -100,7 +100,7 @@ function Player(username, characterType, x, y, team){
             this.reserveAmmo = 0;
             this.clipAmmo = 0;
             this.damage = 25;
-            this.inaccuracy = 10;
+            this.inaccuracy = 5;
             this.bulletSpeed = 20;
             this.fireRate = 800;
             this.reloadTime = 0;
@@ -123,7 +123,7 @@ function Player(username, characterType, x, y, team){
             this.reserveAmmo = 100;
             this.clipAmmo = 100;
             this.damage = 10;
-            this.inaccuracy = 0;
+            this.inaccuracy = 20;
             this.bulletSpeed = 15;
             this.fireRate = 30;
             this.reloadTime = 2000;
@@ -151,6 +151,28 @@ function Player(username, characterType, x, y, team){
             this.reloadTime = 0;
             this.xSpeed = 6;
             this.ySpeed = 6;
+        } else if (this.weaponName == "Grenades"){
+            this.ammo = 1;
+            this.reserveAmmo = 5;
+            this.clipAmmo = 1;
+            this.damage = 0;
+            this.inaccuracy = 0;
+            this.bulletSpeed = 10;
+            this.fireRate = 800;
+            this.reloadTime = 400;
+            this.xSpeed = 5;
+            this.ySpeed = 5;
+        } else if (this.weaponName == "Grenade Launcher"){
+            this.ammo = 6;
+            this.reserveAmmo = 12;
+            this.clipAmmo = 6;
+            this.damage = 0;
+            this.inaccuracy = 0;
+            this.bulletSpeed = 12;
+            this.fireRate = 500;
+            this.reloadTime = 1200;
+            this.xSpeed = 4;
+            this.ySpeed = 4;
         }
     }
 }
@@ -203,11 +225,9 @@ function Bullet(x, y, aimX, aimY, shooter, speed, damage) {
     this.travel = [aimX - x, aimY - y];
     this.speed = speed;
     this.damage = damage;
-    // this.normalVec = vector.normalize();
-    // this.update = function(){
-    //     this.x = this.x + normalVec.x;
-    //     this.y = this.y + normalVec.y;
-    // }
+    
+    this.type = "bullet";
+
     this.updateBulletLocation = function(){
         this.x = this.x + this.speed*this.travel[0]/Math.sqrt(Math.pow(this.travel[0],2) + Math.pow(this.travel[1],2));
         this.y = this.y + this.speed*this.travel[1]/Math.sqrt(Math.pow(this.travel[0],2) + Math.pow(this.travel[1],2));
@@ -218,6 +238,7 @@ var players = {};
 var playerCount;
 var survivorCount;
 var insurgentCount;
+var alienCount;
 var generatorCount;
 var winners = "none";
 var eventActivated = false;
@@ -313,9 +334,9 @@ var names = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Greenwold
 "Maven", "North Star", "Ool", "Patterson", "Queen", "Realter", "Sanguine", "Tommy", "Vindy", "Ursula", "Wehrmacht", "X-Ray", "Youngstan",
 "Zai"];
 
-var randomEvents = ["Rescue Operation", "Aliens", "Rescue Operation"];
+var randomEvents = ["Rescue Operation", "Aliens", "Insurgent Arrival"];
 var possibleWeapons = ["Pistol", "Rifle", "Pistol", "Rifle", "Pistol", "Sniper", "Minigun", "Pistol", "Rifle", "Shotgun", "Shotgun", "Shotgun",
-"Shotgun", "Tesla Rifle"];
+, "Tesla Rifle", "Grenades", "Grenades", "Grenades", "Grenade Launcher"];
 
 var startSetup = false;
 var d = new Date();
@@ -324,7 +345,7 @@ var startTime = d.getTime();
 var endGameTime = 0;
 var start = false; // note
 var timeSinceStart = 0;
-var event;
+var event = "No Event";
 
 //map dimensions
 var mapLength = 3800;
@@ -432,16 +453,34 @@ function newConnection(socket){
                 if (gameTime - players[socket.id].timeLastShot > players[socket.id].fireRate){
                     players[socket.id].timeLastShot = gameTime;
                     for (player in players){
-                        if (player != socket.id && distance(players[player].x, players[player].y, players[socket.id].x, players[socket.id].y) < 120){
+                        if (player != socket.id && distance(players[player].x, players[player].y, players[socket.id].x, players[socket.id].y) < 120 && players[player].team != "Alien"){
                             players[player].health -= players[socket.id].damage;
                         }
+
+                        if (players[player].health <= 0){
+                            players[player].team = "Alien";
+                            players[player].weaponName = "Melee";
+                            players[player].powerUsage = "N/A";
+                            players[player].power = 100;
+                            players[player].health = 100;
+                            players[player].updateGun();
+                        }
                     }
+                }
+            }
+            else if (players[socket.id].weaponName == "Grenades" || players[socket.id].weaponName == "Grenade Launcher") {
+                if (gameTime - players[socket.id].timeLastShot > players[socket.id].fireRate && players[socket.id].ammo > 0 && players[socket.id].isReloading == false){
+                    bullets.push(new Bullet(players[socket.id].x, players[socket.id].y, pos[0], pos[1], socket.id, players[socket.id].bulletSpeed, players[socket.id].damage));
+                    bullets[bullets.length - 1].type = "grenade";
+                    bullets[bullets.length - 1].r = 30;
+                    players[socket.id].timeLastShot = gameTime;
+                    players[socket.id].ammo -= 1;
                 }
             }
             else if (players[socket.id].weaponName == "Shotgun") {
                 if (gameTime - players[socket.id].timeLastShot > players[socket.id].fireRate && players[socket.id].ammo > 0 && players[socket.id].isReloading == false){
                     for (var i = 0; i < 10; i ++){
-                        bullets.push(new Bullet(players[socket.id].x, players[socket.id].y, pos[0] + randint(-50, 80), pos[1]+ randint(-50, 80), socket.id, players[socket.id].bulletSpeed, players[socket.id].damage));
+                        bullets.push(new Bullet(players[socket.id].x, players[socket.id].y, pos[0] + randint(-50, 50), pos[1]+ randint(-50, 50), socket.id, players[socket.id].bulletSpeed, players[socket.id].damage));
                     }
                     players[socket.id].timeLastShot = gameTime;
                     players[socket.id].ammo -= 1;
@@ -457,7 +496,7 @@ function newConnection(socket){
             }
             else{
                 if (gameTime - players[socket.id].timeLastShot > players[socket.id].fireRate && players[socket.id].ammo > 0 && players[socket.id].isReloading == false){
-                    bullets.push(new Bullet(players[socket.id].x, players[socket.id].y, pos[0], pos[1], socket.id, players[socket.id].bulletSpeed, players[socket.id].damage));
+                    bullets.push(new Bullet(players[socket.id].x, players[socket.id].y, pos[0] + randint(-players[socket.id].inaccuracy, players[socket.id].inaccuracy), pos[1] + randint(-players[socket.id].inaccuracy, players[socket.id].inaccuracy), socket.id, players[socket.id].bulletSpeed, players[socket.id].damage));
                     players[socket.id].timeLastShot = gameTime;
                     players[socket.id].ammo -= 1;
                 }
@@ -598,7 +637,14 @@ function checkBulletCollision (){
     for (var c = 0; c < walls.length; c++){
         for (var i = bullets.length - 1; i >= 0; i --){
             if (rectCircDetect(walls[c], bullets[i])){
-                bullets.splice(i, 1);
+                if (bullets[i].type == "bullet"){
+                    bullets.splice(i, 1);
+                } else if (bullets[i].type == "grenade"){
+                    for (var c = 0; c < 30; c ++){
+                        bullets.push(new Bullet(bullets[i].x+ randint(-10, 10), bullets[i].y+ randint(-10, 10), bullets[i].x + randint(-50, 50), bullets[i].y + randint(-50, 50), bullets[i].shooter, 10, 10));
+                    }
+                    bullets.splice(i, 1);
+                }
             }
         }
     }
@@ -606,8 +652,15 @@ function checkBulletCollision (){
     for (player in players){
         for (var i = bullets.length - 1; i >= 0; i --){
             if (distance(players[player].x, players[player].y, bullets[i].x, bullets[i].y) < bullets[i].r/2 + players[player].r/2 && bullets[i].shooter != player && players[player].team != "Ghost"){ //players[player].team != players[bullets[i].shooter].team 
-                players[player].health -= bullets[i].damage;
-                bullets.splice(i, 1);
+                if (bullets[i].type == "bullet"){
+                    players[player].health -= bullets[i].damage;
+                    bullets.splice(i, 1);
+                } else if (bullets[i].type == "grenade"){
+                    for (var c = 0; c < 30; c ++){
+                        bullets.push(new Bullet(bullets[i].x + randint(-10, 10), bullets[i].y + randint(-10, 10), bullets[i].x + randint(-50, 50), bullets[i].y + randint(-50, 50), bullets[i].shooter, 10, 10));
+                    }
+                    bullets.splice(i, 1);
+                }
             }
         }
     }
@@ -619,7 +672,7 @@ function pickupCheck(){
     }
     for (var c = 0; c < items.length; c++){
         for (player in players){
-            if (rectCircDetect(items[c], players[player]) && players[player].team != "Ghost"){
+            if (rectCircDetect(items[c], players[player]) && players[player].team != "Ghost" && players[player].team != "Alien"){
                 players[player].canPickup = items[c].name;
             }
             if (items.length == 0){
@@ -675,7 +728,7 @@ function distance(x1, y1, x2, y2){
 }
 
 function randint(lowerNum, upperNum){
-    return Math.floor(Math.random() * upperNum) + lowerNum;
+    return Math.floor(Math.random() * (upperNum - lowerNum + 1)) + lowerNum;
 }
 
 function reloadCheck(){
@@ -811,6 +864,7 @@ function checkForSurvivors(){
     playerCount = 0;
     survivorCount = 0;
     insurgentCount = 0;
+    alienCount = 0;
 
     for (player in players){
         if (players[player].team != "Ghost"){
@@ -821,19 +875,25 @@ function checkForSurvivors(){
             survivorCount ++;
         }
 
-        if (players[player].team == "Insurgent"){
+        if (players[player].team == "Insurgent" || players[player].team == "Insurgent Officer"){
             insurgentCount ++;
+        }
+        if (players[player].team == "Alien"){
+            alienCount ++;
         }
     }
 
 
-    if (timeSinceStart > 15*1000){
-        if (survivorCount == 0 && endGameTime == 0){
+    if (timeSinceStart > 15*1000 || event != "No Event"){
+        if (survivorCount == 0 && endGameTime == 0 && alienCount == 0){
             endGameTime = gameTime;
             winners = "Insurgents";
-        } else if (insurgentCount == 0 && endGameTime == 0){
+        } else if (insurgentCount == 0 && endGameTime == 0 && alienCount == 0){
             endGameTime = gameTime;
             winners = "Survivors";
+        } else if (insurgentCount == 0 && survivorCount == 0 && endGameTime == 0){
+            endGameTime = gameTime;
+            winners = "Aliens";
         }
     }
 
@@ -864,6 +924,7 @@ function checkForEndGame(){
         endGameTime = 0;
         timeSinceStart = 0;
         items = [];
+        event = "No Event";
         entities = [new Entity (1350, -350, 200, 200, "RESPAWN STATION", "blue")];
         eventActivated = false;
         deadBodies = [];
@@ -891,12 +952,17 @@ function assignRoles (){
             }
             players[random].team = "Insurgent";  
         }
-
-
         spawnStartItems();
-    } else if (timeSinceStart > 80*1000 && eventActivated == false){
+    } else if (timeSinceStart > 60*1000 && eventActivated == false){
         eventActivated = true;
-        event = randomEvents[0, randomEvents.length-1];
+        timeSinceStart = 0;
+        event = randomEvents[randint(0, randomEvents.length-1)];
+        d = new Date();
+        gameTime = d.getTime();
+        startTime = d.getTime();
+        endGameTime = 0;
+        timeSinceStart = 0;
+        eventActivated = false;
         if (event == "Rescue Operation"){
             for (player in players){
                 if (players[player].team == "Ghost"){
@@ -911,7 +977,7 @@ function assignRoles (){
                     //1350, -350, 200, 200
                 }
             }
-        } else if (event == "Aliens"){
+        }else if (event == "Aliens"){
             for (player in players){
                 if (players[player].team == "Ghost"){
                     players[player].team = "Alien";
@@ -923,6 +989,19 @@ function assignRoles (){
                     players[player].x = 1350 + randint(0, 200);
                     players[player].y = -350 + randint(0, 200);
                     //1350, -350, 200, 200
+                }
+            }
+        } else if (event == "Insurgent Arrival"){
+            for (player in players){
+                if (players[player].team == "Ghost"){
+                    players[player].team = "Insurgent Officer";
+                    players[player].weaponName = "Grenade Launcher";
+                    players[player].powerUsage = "Medium";
+                    players[player].power = 100;
+                    players[player].health = 100;
+                    players[player].updateGun();
+                    players[player].x = 1350 + randint(0, 200);
+                    players[player].y = -350 + randint(0, 200);
                 }
             }
         }
